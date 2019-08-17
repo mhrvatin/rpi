@@ -1,0 +1,8 @@
+.*
+apartment_data_buffer*
+backup/*
+*.png
+secrets.py
+test-hat.py
+test.py
+*.log
