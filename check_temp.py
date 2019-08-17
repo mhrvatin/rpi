@@ -1,12 +1,12 @@
 #!/usr/bin/python2.7
 from sense_hat import SenseHat
 from datetime import datetime
-from bs4 import BeautifulSoup
 import time
 import os
 import httplib
 import urllib2
 import json
+import requests
 
 def indoor_color_already_written_to_pixel(x, y):
     global I
@@ -90,32 +90,27 @@ def calc_indoor_temp():
     return(ambient - ((cpu_temp - ambient) / 1.5))
 
 def get_weather_data():
-    url = "http://climendo.com/en/weather/hourly/sweden/goeteborg-2711537/"
-    #url = "https://www.yr.no/sted/Sverige/V%C3%A4stra_G%C3%B6taland/G%C3%B6teborg/time_for_time.html"
+    url = "https://api.darksky.net/forecast/00946fb0c5586739ae7a3f6c4f7d6b27/57.71,11.97?units=si"
 
     if network_is_up():
-        page = urllib2.urlopen(url)
-        soup = BeautifulSoup(page, "html5lib")
-        # climendo
-        temperature = soup.find_all("span", class_ = "temp")
-        downfall = soup.find_all("span", class_ = "rain")
-        wind_speed = soup.find_all("span", class_ = "speed")
+        r = requests.get(url)
 
-        try: 
-            ret = [int(temperature[0].string[:-2]), float(downfall[0].string[:-2]), int(wind_speed[0].string[:-2])]
-        except IndexError:
-            ret = [98, 98.0, 98] # 98 means fetch error
-        
-        # yr
-        """temperature = soup.find_all("td", class_ = "temperature")
-        downfall = soup.find_all("td", class_ = "precipitation")
+        if r.status_code == 200:
+            data = json.loads(r.text)
 
-        try:
-            ret = [int(temperature[0].string[:-1]), downfall[0].string[:1], 98]
-        except IndexError:
-            ret = [98, 98]"""
+            try: 
+                temp = data["currently"]["temperature"]
+                wind_speed = data["currently"]["windSpeed"]
+                precip = data["currently"]["precipIntensity"]
+                precip_type = data["currently"]["precipType"]
+
+                ret = [temp, precip, precip_type, wind_speed]
+            except:
+                ret = [98.0, 98.0, 98.0, 98.0] # api error
+        else:
+            ret = [r.status_code, data, 97.0,97.0] # api error
     else:
-        ret = [99, 99.0, 99] # 99 means no network
+        ret = [99.0, 99.0, 99.0, 99.0] # no network
 
     return ret
 
@@ -135,7 +130,7 @@ W = [25, 255, 255]  # White, no network connection
 
 now = datetime.now()
 turn_off_time = now.replace(hour = 21, minute = 0, second = 0, microsecond = 0)
-turn_on_time = now.replace(hour = 6, minute = 30, second = 0, microsecond = 0)
+turn_on_time = now.replace(hour = 7, minute = 0, second = 0, microsecond = 0)
 
 sense = SenseHat()
 
@@ -148,31 +143,34 @@ indoor_temp = calc_indoor_temp()
 indoor_rounded = round(indoor_temp)
 weather_data = get_weather_data()
 outdoor_temp = weather_data[0]
-downfall = weather_data[1]
-wind_speed = weather_data[2]
+precip = weather_data[1]
+precip_type = weather_data[2]
+wind_speed = weather_data[3]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
-outdoor_temp
 
 max_temp = 28
 min_temp = max_temp - 7
 
 #print "%.1f,%s,%s,%s,%.1f,%.1f,%s" % (indoor_temp, outdoor_temp, downfall, wind_speed, humidity, pressure, str(now))
 
-print "{:2.1f},{},{:2.1f},{},{:2.1f},{:3.1f},{}".format(
-        indoor_temp,
-        outdoor_temp,
-        downfall,
-        wind_speed,
-        humidity,
-        pressure,
-        str(now))
+print "{:2.1f},{:2.1f},{:2.1f},{},{:2.1f},{:2.1f},{:2.1f},{}".format(
+    indoor_temp,
+    outdoor_temp,
+    precip,
+    precip_type,
+    wind_speed,
+    humidity,
+    pressure,
+    str(now)
+)
+
 #if (graph_is_showing()):
 shift_hours()
 
 if indoor_rounded >= min_temp and indoor_rounded <= max_temp:
     set_indoor(0, translate_temp(indoor_rounded, min_temp, max_temp, 0, 7))
 
-if outdoor_temp != 99 and outdoor_temp != 98:
+if outdoor_temp != 98 and outdoor_temp != 99:
     if outdoor_temp >= min_temp and outdoor_temp <= max_temp:
         set_outdoor(0, translate_temp(outdoor_temp, min_temp, max_temp, 0, 7))

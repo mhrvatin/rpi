@@ -3,7 +3,7 @@ from peewee import *
 import httplib
 import secrets
 
-formated_data = []
+formatted_data = []
 db = MySQLDatabase(secrets.DB,
                     host = secrets.HOST,
                     user = secrets.USER,
@@ -25,7 +25,8 @@ def network_is_up():
 class Apartment_data(Model):
     indoor_temperature = DoubleField()
     outdoor_temperature = DoubleField()
-    downfall = DoubleField()
+    precipitation = DoubleField()
+    precipitation_type = CharField(120)
     wind_speed = DoubleField()
     humidity = DoubleField()
     pressure = DoubleField()
@@ -40,34 +41,27 @@ with open("apartment_data_buffer") as f:
 buffered_data = [x.strip() for x in buffered_data]
 
 for line in buffered_data:
-    formated_data.append(line.split(","))
+    formatted_data.append(line.split(","))
 
 if network_is_up():
     db.connect()
 
-    for hour in formated_data:
-        if hour[1] == "no_network":
-            formated_outdoor_temperature = 99
-            formated_downfall = 99
-            formated_wind_speed = 99
-        elif hour[1] == "fetch_error":
-            formated_outdoor_temperature = 98
-            formated_downfall = 98
-            formated_wind_speed = 98
-        else:
-            formated_outdoor_temperature = hour[1]
-            formated_downfall = hour[2]
-            formated_wind_speed = hour[3]
-
-        apartment = Apartment_data(indoor_temperature = hour[0],
-                                outdoor_temperature = formated_outdoor_temperature,
-                                downfall = formated_downfall,
-                                wind_speed = formated_wind_speed,
-                                humidity = hour[4],
-                                pressure = hour[5],
-                                time = hour[6])
-        apartment.save()
-
+    for hour in formatted_data:
+        krebo = Apartment_data(indoor_temperature = hour[0],
+                                outdoor_temperature = hour[1],
+                                precipitation = hour[2],
+                                precipitation_type = hour[3],
+                                wind_speed = hour[4],
+                                humidity = hour[5],
+                                pressure = hour[6],
+                                time = hour[7])
+        krebo.save()
     db.close()
 
+    with open("upload.log", "a") as log:
+        log.write("upload successfull at {}, with data {}\n".format(str(datetime.now()), formatted_data))
+
     open("apartment_data_buffer", "w").close()
+else:
+    with open("upload.log", "a") as log:
+        log.write("upload failed at {} \n".format(str(datetime.now())))
