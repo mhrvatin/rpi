@@ -7,6 +7,7 @@ import httplib
 import urllib2
 import json
 import requests
+import secrets
 
 def indoor_color_already_written_to_pixel(x, y):
     global I
@@ -90,7 +91,7 @@ def calc_indoor_temp():
     return(ambient - ((cpu_temp - ambient) / 1.5))
 
 def get_weather_data():
-    url = "https://api.darksky.net/forecast/00946fb0c5586739ae7a3f6c4f7d6b27/57.71,11.97?units=si"
+    url = "https://api.darksky.net/forecast/"+secrets.DARKSKY_API+"/57.71,11.97?units=si"
 
     if network_is_up():
         r = requests.get(url)
