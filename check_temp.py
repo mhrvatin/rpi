@@ -99,17 +99,17 @@ def get_weather_data():
         if r.status_code == 200:
             data = json.loads(r.text)
 
-            try: 
-                temp = data["currently"]["temperature"]
-                wind_speed = data["currently"]["windSpeed"]
-                precip = data["currently"]["precipIntensity"]
+            temp = data["currently"]["temperature"]
+            wind_speed = data["currently"]["windSpeed"]
+            precip = data["currently"]["precipIntensity"]
+            
+            if precip != 0:
                 precip_type = data["currently"]["precipType"]
-
-                ret = [temp, precip, precip_type, wind_speed]
-            except:
-                ret = [98.0, 98.0, 98.0, 98.0] # api error
+            else:
+                precip_type = None
+            ret = [temp, precip, precip_type, wind_speed]
         else:
-            ret = [r.status_code, data, 97.0,97.0] # api error
+            ret = [r.status_code, json.loads(r.text), 98.0, 98.0] # api error
     else:
         ret = [99.0, 99.0, 99.0, 99.0] # no network
 
