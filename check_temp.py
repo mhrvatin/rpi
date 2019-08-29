@@ -103,10 +103,11 @@ def get_weather_data():
             wind_speed = data["currently"]["windSpeed"]
             precip = data["currently"]["precipIntensity"]
             
-            if precip != 0:
+            if precip > 0:
                 precip_type = data["currently"]["precipType"]
             else:
                 precip_type = None
+
             ret = [temp, precip, precip_type, wind_speed]
         else:
             ret = [r.status_code, json.loads(r.text), 98.0, 98.0] # api error
