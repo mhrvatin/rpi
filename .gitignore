@@ -6,3 +6,4 @@ secrets.py
 test-hat.py
 test.py
 *.log
+*.pyc
