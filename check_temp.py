@@ -1,4 +1,5 @@
 #!/usr/bin/python2.7
+# -*- coding: utf-8 -*-
 from sense_hat import SenseHat
 from datetime import datetime
 import time
@@ -80,9 +81,9 @@ def clear_now(): # refactor to get info from separate config file, where min/max
     sense.set_pixel(0, 2, N)
     sense.set_pixel(0, 3, N)
     sense.set_pixel(0, 4, N)
-    sense.set_pixel(0, 5, Y)
+    sense.set_pixel(0, 5, N)
     sense.set_pixel(0, 6, N)
-    sense.set_pixel(0, 7, R)
+    sense.set_pixel(0, 7, Y)
 
 def calc_indoor_temp():
     cpu_temp = int(float(get_cpu_temp()))
@@ -101,7 +102,7 @@ def get_weather_data():
 
             temp = data["currently"]["temperature"]
             wind_speed = data["currently"]["windSpeed"]
-            precip = data["currently"]["precipIntensity"]
+            precip = float(data["currently"]["precipIntensity"])
             
             if precip > 0:
                 precip_type = data["currently"]["precipType"]
@@ -151,12 +152,12 @@ wind_speed = weather_data[3]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
 
-max_temp = 28
+max_temp = 26
 min_temp = max_temp - 7
 
-#print "%.1f,%s,%s,%s,%.1f,%.1f,%s" % (indoor_temp, outdoor_temp, downfall, wind_speed, humidity, pressure, str(now))
+# print "%.1f,%s,%s,%s,%.1f,%.1f,%s" % (indoor_temp, outdoor_temp, downfall, wind_speed, humidity, pressure, str(now))
 
-print "{:2.1f},{:2.1f},{:2.1f},{},{:2.1f},{:2.1f},{:2.1f},{}".format(
+print "{:2.1f},{:2.1f},{:2.1f},{},{:2.1f},{:2.1f},{:2.1f},{},{}".format(
     indoor_temp,
     outdoor_temp,
     precip,
@@ -164,6 +165,7 @@ print "{:2.1f},{:2.1f},{:2.1f},{},{:2.1f},{:2.1f},{:2.1f},{}".format(
     wind_speed,
     humidity,
     pressure,
+    "Olivedalsgatan 16",
     str(now)
 )
 

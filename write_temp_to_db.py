@@ -30,6 +30,7 @@ class Apartment_data(Model):
     wind_speed = DoubleField()
     humidity = DoubleField()
     pressure = DoubleField()
+    city = CharField(120)
     time = DateTimeField()
 
     class Meta:
@@ -50,11 +51,12 @@ if network_is_up():
         krebo = Apartment_data(indoor_temperature = hour[0],
                                 outdoor_temperature = hour[1],
                                 precipitation = hour[2],
-                                precipitation_type = hour[3],
+                                precipitation_type = None if hour[3] == "None" else hour[3],
                                 wind_speed = hour[4],
                                 humidity = hour[5],
                                 pressure = hour[6],
-                                time = hour[7])
+                                city = hour[7],
+                                time = hour[8])
         krebo.save()
     db.close()
 
