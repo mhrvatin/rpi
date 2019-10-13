@@ -30,8 +30,8 @@ class Apartment_data(Model):
     wind_speed = DoubleField()
     humidity = DoubleField()
     pressure = DoubleField()
-    city = CharField(120)
-    time = DateTimeField()
+    address = CharField(120)
+    date = DateTimeField()
 
     class Meta:
         database = db
@@ -48,16 +48,16 @@ if network_is_up():
     db.connect()
 
     for hour in formatted_data:
-        krebo = Apartment_data(indoor_temperature = hour[0],
-                                outdoor_temperature = hour[1],
-                                precipitation = hour[2],
-                                precipitation_type = None if hour[3] == "None" else hour[3],
-                                wind_speed = hour[4],
-                                humidity = hour[5],
-                                pressure = hour[6],
-                                city = hour[7],
-                                time = hour[8])
-        krebo.save()
+        apartment = Apartment_data(indoor_temperature = hour[0],
+                    outdoor_temperature = hour[1],
+                    precipitation = hour[2],
+                    precipitation_type = None if hour[3] == "None" else hour[3],
+                    wind_speed = hour[4],
+                    humidity = hour[5],
+                    pressure = hour[6],
+                    address = hour[7],
+                    date  = hour[8])
+        apartment.save()
     db.close()
 
     with open("upload.log", "a") as log:
