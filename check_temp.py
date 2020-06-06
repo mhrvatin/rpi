@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 from sense_hat import SenseHat
 from datetime import datetime
-import time
+import argparse
 import os
 import httplib
-import urllib2
 import json
 import requests
 import secrets
@@ -109,19 +108,21 @@ def get_weather_data():
             else:
                 precip_type = None
 
-            ret = [temp, precip, precip_type, wind_speed]
+            return [temp, precip, precip_type, wind_speed]
         else:
-            ret = [r.status_code, json.loads(r.text), 98.0, 98.0] # api error
-    else:
-        ret = [99.0, 99.0, 99.0, 99.0] # no network
+            return [98.0, 98.0, 98.0, 98.0] # api error
 
-    return ret
+    return [99.0, 99.0, 99.0, 99.0] # no network
 
 def turn_off_display():
     sense.gamma = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 def turn_on_display():
     sense.low_light = True
+
+parser = argparse.ArgumentParser("check_temp")
+parser.add_argument("output", help="[json|plain] Wether to output as JSON object or comma separated string")
+args = parser.parse_args()
 
 N = [0, 0, 0]       # null
 R = [244, 67, 54]   # Red
@@ -137,10 +138,12 @@ turn_on_time = now.replace(hour = 7, minute = 0, second = 0, microsecond = 0)
 
 sense = SenseHat()
 
+"""
 if now >= turn_off_time or now <= turn_on_time:
     turn_off_display()
 else:
     turn_on_display()
+"""
 
 indoor_temp = calc_indoor_temp()
 indoor_rounded = round(indoor_temp)
@@ -151,13 +154,22 @@ precip_type = weather_data[2]
 wind_speed = weather_data[3]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
+address = "Fjällsippan 1"
 
 max_temp = 26
 min_temp = max_temp - 7
 
-# print "%.1f,%s,%s,%s,%.1f,%.1f,%s" % (indoor_temp, outdoor_temp, downfall, wind_speed, humidity, pressure, str(now))
+json_output = { "indoorTemperature": "{:2.1f}".format(indoor_temp),
+        "outdoorTemperature": "{:2.1f}".format(outdoor_temp),
+        "precipitation": "{:2.1f}".format(precip),
+        "precipitationType": precip_type, 
+        "windSpeed": "{:2.1f}".format(wind_speed),
+        "humidity": "{:2.1f}".format(humidity),
+        "pressure": "{:2.1f}".format(pressure),
+        "address": address,
+        "timestamp": str(now) }
 
-print "{:2.1f},{:2.1f},{:2.1f},{},{:2.1f},{:2.1f},{:2.1f},{},{}".format(
+string_output = "{:2.1f},{:2.1f},{:2.1f},{},{:2.1f},{:2.1f},{:2.1f},{},{}".format(
     indoor_temp,
     outdoor_temp,
     precip,
@@ -165,9 +177,14 @@ print "{:2.1f},{:2.1f},{:2.1f},{},{:2.1f},{:2.1f},{:2.1f},{},{}".format(
     wind_speed,
     humidity,
     pressure,
-    "Olivedalsgatan 16",
+    "Fjällsippan 1",
     str(now)
 )
+
+if args.output.lower() == "json":
+    print(json.dumps(json_output))
+else:
+    print(string_output)
 
 #if (graph_is_showing()):
 shift_hours()

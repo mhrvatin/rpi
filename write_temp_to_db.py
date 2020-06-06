@@ -2,25 +2,12 @@ from datetime import datetime
 from peewee import *
 import httplib
 import secrets
+import argparse
 
-formatted_data = []
 db = MySQLDatabase(secrets.DB,
-                    host = secrets.HOST,
-                    user = secrets.USER,
-                    passwd = secrets.PASS)
-
-def network_is_up():
-    conn = httplib.HTTPConnection("www.google.com", timeout = 5)
-
-    try:
-        conn.request("HEAD", "/")
-        conn.close()
-        
-        return True
-    except:
-        conn.close()
-
-        return False
+                    host = secrets.DI_HOST,
+                    user = secrets.DI_USER,
+                    passwd = secrets.DI_PASS)
 
 class Apartment_data(Model):
     indoor_temperature = DoubleField()
@@ -35,6 +22,28 @@ class Apartment_data(Model):
 
     class Meta:
         database = db
+
+def log_data(data):
+    with open("upload.log", "a") as log:
+        log.write("{} {} \n".format(str(datetime.now()), data))
+
+    # flush buffer
+    # open("apartment_data_buffer", "w".close()
+
+def network_is_up():
+    conn = httplib.HTTPConnection("www.google.com", timeout = 5)
+
+    try:
+        conn.request("HEAD", "/")
+        conn.close()
+        
+        return True
+    except:
+        conn.close()
+
+        return False
+
+formatted_data = []
 
 with open("apartment_data_buffer") as f:
     buffered_data = f.readlines()
