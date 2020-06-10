@@ -5,6 +5,7 @@ import httplib
 import secrets
 
 db = MySQLDatabase(secrets.DB,
+                   port = secrets.AWS_PORT,
                    host = secrets.AWS_HOST,
                    user = secrets.AWS_USER,
                    passwd = secrets.AWS_PASS)
@@ -26,9 +27,6 @@ class Apartment_data(Model):
 def log_data(data):
     with open("upload.log", "a") as log:
         log.write("{} {} \n".format(str(datetime.now()), data))
-
-    # flush buffer
-    # open("apartment_data_buffer", "w").close()
 
 def network_is_up():
     conn = httplib.HTTPConnection("www.google.com", timeout = 5)
@@ -65,5 +63,8 @@ if network_is_up():
     db.close()
             
     log_data("Upload successfull with data {}".format(buffered_data))
+
+    # flush buffer
+    open("apartment_data_buffer.json", "w").close()
 else:
     log_data("No internet conncetion")
