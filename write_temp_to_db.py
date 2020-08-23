@@ -1,13 +1,13 @@
 from datetime import datetime
-from peewee import *
+from peewee import * 
+import json
 import httplib
 import secrets
-import argparse
 
 db = MySQLDatabase(secrets.DB,
-                    host = secrets.DI_HOST,
-                    user = secrets.DI_USER,
-                    passwd = secrets.DI_PASS)
+                   host = secrets.HOST,
+                   user = secrets.USER,
+                   passwd = secrets.PASS)
 
 class Apartment_data(Model):
     indoor_temperature = DoubleField()
@@ -27,9 +27,6 @@ def log_data(data):
     with open("upload.log", "a") as log:
         log.write("{} {} \n".format(str(datetime.now()), data))
 
-    # flush buffer
-    # open("apartment_data_buffer", "w".close()
-
 def network_is_up():
     conn = httplib.HTTPConnection("www.google.com", timeout = 5)
 
@@ -43,36 +40,30 @@ def network_is_up():
 
         return False
 
-formatted_data = []
-
-with open("apartment_data_buffer") as f:
+with open("apartment_data_buffer.json") as f:
     buffered_data = f.readlines()
 
-buffered_data = [x.strip() for x in buffered_data]
-
-for line in buffered_data:
-    formatted_data.append(line.split(","))
-
 if network_is_up():
-    db.connect()
+    db.connect() 
 
-    for hour in formatted_data:
-        apartment = Apartment_data(indoor_temperature = hour[0],
-                    outdoor_temperature = hour[1],
-                    precipitation = hour[2],
-                    precipitation_type = None if hour[3] == "None" else hour[3],
-                    wind_speed = hour[4],
-                    humidity = hour[5],
-                    pressure = hour[6],
-                    address = hour[7],
-                    date  = hour[8])
+    for raw_data in buffered_data:
+        json_data = json.loads(raw_data)
+
+        apartment = Apartment_data(indoor_temperature = json_data["indoorTemperature"],
+                    outdoor_temperature = json_data["outdoorTemperature"],
+                    precipitation = json_data["precipitation"],
+                    precipitation_type = json_data["precipitationType"],
+                    wind_speed = json_data["windSpeed"],
+                    humidity = json_data["humidity"],
+                    pressure = json_data["pressure"],
+                    address = json_data["address"],
+                    date = json_data["timestamp"])
         apartment.save()
     db.close()
+            
+    log_data("Upload successfull with data {}".format(buffered_data))
 
-    with open("upload.log", "a") as log:
-        log.write("upload successfull at {}, with data {}\n".format(str(datetime.now()), formatted_data))
-
-    open("apartment_data_buffer", "w").close()
+    # flush buffer
+    open("apartment_data_buffer.json", "w").close()
 else:
-    with open("upload.log", "a") as log:
-        log.write("upload failed at {} \n".format(str(datetime.now())))
+    log_data("No internet conncetion")

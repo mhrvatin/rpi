@@ -79,10 +79,10 @@ def clear_now(): # refactor to get info from separate config file, where min/max
     sense.set_pixel(0, 1, N)
     sense.set_pixel(0, 2, N)
     sense.set_pixel(0, 3, N)
-    sense.set_pixel(0, 4, N)
+    sense.set_pixel(0, 4, Y)
     sense.set_pixel(0, 5, N)
-    sense.set_pixel(0, 6, N)
-    sense.set_pixel(0, 7, Y)
+    sense.set_pixel(0, 6, R)
+    sense.set_pixel(0, 7, N)
 
 def calc_indoor_temp():
     cpu_temp = int(float(get_cpu_temp()))
@@ -120,10 +120,6 @@ def turn_off_display():
 def turn_on_display():
     sense.low_light = True
 
-parser = argparse.ArgumentParser("check_temp")
-parser.add_argument("output", help="[json|plain] Wether to output as JSON object or comma separated string")
-args = parser.parse_args()
-
 N = [0, 0, 0]       # null
 R = [244, 67, 54]   # Red
 Y = [255, 235, 59]  # Yellow
@@ -154,9 +150,9 @@ precip_type = weather_data[2]
 wind_speed = weather_data[3]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
-address = "Fjällsippan 1"
+address = "Träkilsgatn 46"
 
-max_temp = 26
+max_temp = 29
 min_temp = max_temp - 7
 
 json_output = { "indoorTemperature": "{:2.1f}".format(indoor_temp),
@@ -169,22 +165,7 @@ json_output = { "indoorTemperature": "{:2.1f}".format(indoor_temp),
         "address": address,
         "timestamp": str(now) }
 
-string_output = "{:2.1f},{:2.1f},{:2.1f},{},{:2.1f},{:2.1f},{:2.1f},{},{}".format(
-    indoor_temp,
-    outdoor_temp,
-    precip,
-    precip_type,
-    wind_speed,
-    humidity,
-    pressure,
-    "Fjällsippan 1",
-    str(now)
-)
-
-if args.output.lower() == "json":
-    print(json.dumps(json_output))
-else:
-    print(string_output)
+print(json.dumps(json_output))
 
 #if (graph_is_showing()):
 shift_hours()
