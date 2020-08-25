@@ -110,9 +110,9 @@ def get_weather_data():
 
             return [temp, precip, precip_type, wind_speed]
         else:
-            return [98.0, 98.0, 98.0, 98.0] # api error
+            return [98.0, 98.0, 'api error', 98.0] # api error
 
-    return [99.0, 99.0, 99.0, 99.0] # no network
+    return [99.0, 99.0, 'no network', 99.0] # no network
 
 def turn_off_display():
     sense.gamma = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -150,7 +150,7 @@ precip_type = weather_data[2]
 wind_speed = weather_data[3]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
-address = "Träkilsgatn 46"
+address = "Träkilsgatan 46"
 
 max_temp = 29
 min_temp = max_temp - 7
