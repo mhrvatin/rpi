@@ -3,31 +3,33 @@ import sys
 
 sense = SenseHat()
 
-def set_base_layout(max):
-    idx = max
-    y_offset = 7
+WARM_TEMPERATURE = 26
+HOT_TEMPERATURE = 28
+PIXEL_DISPLAY_WIDTH = 7
+PIXEL_COLORS = {
+    "NULL": [0, 0, 0],
+    "RED": [244, 67, 54],
+    "YELLOW": [255, 235, 59],
+}
 
-    while idx >= max - 7:
-        if idx == 26:
+def set_base_layout(max_temp):
+    idx = max_temp
+    y_offset = PIXEL_DISPLAY_WIDTH
+
+    while idx >= max_temp - PIXEL_DISPLAY_WIDTH:
+        if idx == WARM_TEMPERATURE:
             for x in range(0, 8):
-                sense.set_pixel(x, y_offset, Y)
-        elif idx == 28:
+                sense.set_pixel(x, y_offset, PIXEL_COLORS["YELLOW"])
+        elif idx == HOT_TEMPERATURE:
             for x in range(0, 8):
-                sense.set_pixel(x, y_offset, R)
+                sense.set_pixel(x, y_offset, PIXEL_COLORS["RED"])
         else:
             for x in range(0, 8):
-                sense.set_pixel(x, y_offset, N)
+                sense.set_pixel(x, y_offset, PIXEL_COLORS["NULL"])
 
         idx -= 1
         y_offset -= 1
 
-N = (0, 0, 0)       # null
-R = (244, 67, 54)   # Red
-Y = (255, 235, 59)  # Yellow
-O = (63, 81, 181)   # Outdoors
-I = (76, 175, 80)   # Indoors
-M = (110, 188, 164) # Indoor and outdoor mixed
-B = (33, 150, 243)  # Blue, no network connection
 
 if len(sys.argv) != 2:
     print 'Invalid argument'
