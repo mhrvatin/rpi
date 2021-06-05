@@ -20,7 +20,7 @@ PIXEL_COLORS = {
     "OUTDOORS": [63, 81, 181],
     "INDOORS": [72, 172, 80],
     "MIXED": [166, 98, 175],
-    "WHITE": [25, 255, 255]
+    "WHITE": [255, 255, 255]
 }
 
 ERROR_CODES = {
@@ -29,7 +29,7 @@ ERROR_CODES = {
 }
 
 def indoor_color_already_written_to_pixel(x, y):
-    if sense.get_pixel(x, y) == PIXEL_COLORS["NULL"]:
+    if sense.get_pixel(x, y) == PIXEL_COLORS["INDOORS"]:
         return True
 
     return False
