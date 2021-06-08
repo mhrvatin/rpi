@@ -10,16 +10,16 @@ import requests
 import secrets
 
 ADDRESS = "Träkilsgatan 46"
-MAX_TEMPERATURE = 26
+MAX_TEMPERATURE = 27
 MIN_TEMPERATURE = MAX_TEMPERATURE - 7
 
 PIXEL_COLORS = {
     "NULL": [0, 0, 0],
     "RED": [244, 67, 54],
     "YELLOW": [255, 235, 59],
-    "OUTDOORS": [63, 81, 181],
-    "INDOORS": [72, 172, 80],
-    "MIXED": [166, 98, 175],
+    "BLUE": [63, 81, 181],
+    "GREEN": [72, 172, 80],
+    "PURPLE": [166, 98, 175],
     "WHITE": [255, 255, 255]
 }
 
@@ -29,7 +29,7 @@ ERROR_CODES = {
 }
 
 def indoor_color_already_written_to_pixel(x, y):
-    if sense.get_pixel(x, y) == PIXEL_COLORS["INDOORS"]:
+    if sense.get_pixel(x, y) == PIXEL_COLORS["GREEN"]:
         return True
 
     return False
@@ -61,16 +61,16 @@ def get_cpu_temp():
 
 def set_indoor(x, y):
     if network_is_up():
-        sense.set_pixel(x, y, PIXEL_COLORS["INDOORS"])
+        sense.set_pixel(x, y, PIXEL_COLORS["GREEN"])
     else:
         sense.set_pixel(x, y, PIXEL_COLORS["WHITE"])
 
 def set_outdoor(x, y):
     if network_is_up():
         if indoor_color_already_written_to_pixel(x, y):
-            sense.set_pixel(x, y, PIXEL_COLORS["MIXED"])
+            sense.set_pixel(x, y, PIXEL_COLORS["PURPLE"])
         else:
-            sense.set_pixel(x, y, PIXEL_COLORS["OUTDOORS"])
+            sense.set_pixel(x, y, PIXEL_COLORS["BLUE"])
 
 def translate_temp(temp, old_min, old_max, new_min, new_max):
     old_range = (old_max - old_min)  
@@ -93,8 +93,8 @@ def clear_now(): # refactor to get info from separate config file, where min/max
     sense.set_pixel(0, 3, PIXEL_COLORS["NULL"])
     sense.set_pixel(0, 4, PIXEL_COLORS["NULL"])
     sense.set_pixel(0, 5, PIXEL_COLORS["NULL"])
-    sense.set_pixel(0, 6, PIXEL_COLORS["NULL"])
-    sense.set_pixel(0, 7, PIXEL_COLORS["YELLOW"])
+    sense.set_pixel(0, 6, PIXEL_COLORS["YELLOW"])
+    sense.set_pixel(0, 7, PIXEL_COLORS["NULL"])
 
 def calc_indoor_temp():
     cpu_temp = int(float(get_cpu_temp()))
