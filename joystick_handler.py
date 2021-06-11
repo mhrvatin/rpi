@@ -1,10 +1,26 @@
+#!/usr/bin/env python
+
 from sense_hat import SenseHat, ACTION_PRESSED, ACTION_HELD, ACTION_RELEASED
-from signal import pause
-import urllib2
+import signal
+import sys
 import os
+import urllib2
 import time
 import binary_clock
-import fetch_from_db
+import enum
+#import fetch_from_db
+
+class Clock(enum.Enum):
+    On = True
+    Off = False
+
+def set_clock(state):
+    global is_clock_on
+    is_clock_on = state
+
+def clock_status():
+    global is_clock_on
+    return is_clock_on
 
 def get_cpu_temp():
     res = os.popen("vcgencmd measure_temp").readline()
@@ -33,16 +49,16 @@ def restore_graph():
     sense.set_pixels(pixel_list)
 
 def show_clock():
-    global clock_is_on
+    set_clock(Clock.On)
 
-    while clock_is_on:
+    while clock_status() == Clock.On:
         now = time.localtime()
         hour = now.tm_hour
         minute = now.tm_min
         second = now.tm_sec
 
-        y = 5
-        x = 6
+        y_coordinate_offset = 5
+        x_coordinate_offset = 6
 
         binary_time_array = binary_clock.parse_decimal_time(hour, minute, second)
 
@@ -51,26 +67,25 @@ def show_clock():
         for elem_idx, elem in enumerate(binary_time_array):
             for bit_idx, bit in enumerate(elem):
                 if bit == "1":
-                    sense.set_pixel(x, y, 0, 255, 0)
+                    sense.set_pixel(x_coordinate_offset, y_coordinate_offset, 0, 255, 0)
                 else:
-                    sense.set_pixel(x, y, 10, 0, 0)
+                    sense.set_pixel(x_coordinate_offset, y_coordinate_offset, 10, 0, 0)
 
-                y = y - 1
+                y_coordinate_offset = y_coordinate_offset - 1
 
-            y = 5
-            x = x - 1
+            y_coordinate_offset = 5
+            x_coordinate_offset = x_coordinate_offset - 1
 
         # won't register turning display on or off
         for event in events:
-            if event.direction == "middle" and event.action == "pressed": # turn clock off
-                clock_is_on = False
-            elif event.direction == "down" and event.action == "pressed": # turn display off
+            if event.direction == "middle" and event.action == "pressed":
+                set_clock(Clock.Off)
+            elif event.direction == "down" and event.action == "pressed":
                 toggle_display()
 
+        time.sleep(0.9)
 
-        time.sleep(1)
-
-def pushed_up(event):
+def show_current_temp_handler(event):
     if event.action != ACTION_RELEASED:
         if sense.low_light: # display is on
             dim_display_after_showing_temp = False
@@ -88,17 +103,14 @@ def pushed_up(event):
         if dim_display_after_showing_temp:
             toggle_display()
 
-def pushed_down(event):
+def toggle_display_handler(event):
     if event.action != ACTION_RELEASED:
         toggle_display()
 
-def pushed_middle(event):
-    global clock_is_on
-
+def show_clock_handler(event):
     if event.action != ACTION_RELEASED:
-        if not clock_is_on:
+        if clock_status() == Clock.Off:
             save_graph()
-            clock_is_on = True
             show_clock()
             restore_graph()
 
@@ -119,15 +131,18 @@ def pushed_right(event):
     if event.action != ACTION_RELEASED:
         print "pushed right"
 
+def signal_handler(signal, frame):
+    sys.exit(0)
+
 sense = SenseHat()
 
+is_clock_on = Clock.Off
 pixel_list = []
-clock_is_on = False
 time_offset = 7
 
-sense.stick.direction_up = pushed_up
-sense.stick.direction_down = pushed_down
-sense.stick.direction_middle = pushed_middle
-#sense.stick.direction_left = pushed_left
-#sense.stick.direction_right = pushed_right
-pause()
+sense.stick.direction_up = show_current_temp_handler
+sense.stick.direction_down = toggle_display_handler
+sense.stick.direction_middle = show_clock_handler
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+signal.pause()
