@@ -5,9 +5,9 @@ import time
 import secrets
 
 db = MySQLDatabase(secrets.DB,
-                    host = secrets.HOST,
-                    user = secrets.USER,
-                    passwd = secrets.PASS)
+                   host = secrets.HOST,
+                   user = secrets.USER,
+                   passwd = secrets.PASS)
 
 def network_is_up():
     conn = httplib.HTTPConnection("www.google.com", timeout = 5)
