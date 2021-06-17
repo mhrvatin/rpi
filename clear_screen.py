@@ -12,7 +12,7 @@ PIXEL_COLORS = {
     "YELLOW": [255, 235, 59],
 }
 
-def set_base_layout(max_temp):
+def draw_reference_lines(max_temp):
     idx = max_temp
     y_offset = PIXEL_DISPLAY_WIDTH
 
@@ -30,6 +30,21 @@ def set_base_layout(max_temp):
         idx -= 1
         y_offset -= 1
 
+def remove_reference_lines():
+    for x in xrange(0, 8):
+        for y in xrange(0, 8):
+            pixel = sense.get_pixel(x, y)
+
+            if pixel == PIXEL_COLORS["RED"] or pixel == PIXEL_COLORS["YELLOW"]:
+                sense.set_pixel(x, y, PIXEL_COLORS["NULL"])
+
+def shift_hours_down():
+    for x in xrange(0, 8):
+        for y in xrange(0, 7):
+            sense.set_pixel(x, y, sense.get_pixel(x, y + 1))
+
+    for x in xrange(0, 8):
+        sense.set_pixel(x, 7, PIXEL_COLORS["NULL"])
 
 if len(sys.argv) != 2:
     print 'Invalid argument'
@@ -37,4 +52,4 @@ if len(sys.argv) != 2:
     exit
 else:
     max_temp = int(sys.argv[1]) 
-    set_base_layout(max_temp)
+    draw_reference_lines(max_temp)

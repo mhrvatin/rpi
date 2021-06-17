@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 from sense_hat import SenseHat
 from datetime import datetime
-import argparse
 import os
 import httplib
 import json
@@ -10,14 +9,17 @@ import requests
 import secrets
 
 ADDRESS = "Träkilsgatan 46"
-MAX_TEMPERATURE = 27
+MAX_TEMPERATURE = 28
 MIN_TEMPERATURE = MAX_TEMPERATURE - 7
+PIXEL_DISPLAY_WIDTH = 7
+WARM_TEMPERATURE = 26
+HOT_TEMPERATURE = 28
 
 PIXEL_COLORS = {
     "NULL": [0, 0, 0],
-    "RED": [244, 67, 54],
-    "YELLOW": [255, 235, 59],
-    "BLUE": [63, 81, 181],
+    "RED": [240, 64, 48],
+    "YELLOW": [248, 232, 56],
+    "BLUE": [56, 80, 176],
     "GREEN": [72, 172, 80],
     "PURPLE": [166, 98, 175],
     "WHITE": [255, 255, 255]
@@ -34,14 +36,7 @@ def indoor_color_already_written_to_pixel(x, y):
 
     return False
 
-def graph_is_showing():
-    for y in range(0, 7):
-        if sense.get_pixel(0, y) != PIXEL_COLORS["NULL"]:
-            return True
-
-    return False
-
-def network_is_up():
+def is_network_up():
     conn = httplib.HTTPConnection("www.google.com", timeout = 5)
 
     try:
@@ -59,18 +54,14 @@ def get_cpu_temp():
 
     return(res.replace("temp=","").replace("'C\n",""))
 
-def set_indoor(x, y):
-    if network_is_up():
-        sense.set_pixel(x, y, PIXEL_COLORS["GREEN"])
-    else:
-        sense.set_pixel(x, y, PIXEL_COLORS["WHITE"])
+def set_indoor(x, y, color):
+    sense.set_pixel(x, y, color)
 
 def set_outdoor(x, y):
-    if network_is_up():
-        if indoor_color_already_written_to_pixel(x, y):
-            sense.set_pixel(x, y, PIXEL_COLORS["PURPLE"])
-        else:
-            sense.set_pixel(x, y, PIXEL_COLORS["BLUE"])
+    if indoor_color_already_written_to_pixel(x, y):
+        sense.set_pixel(x, y, PIXEL_COLORS["PURPLE"])
+    else:
+        sense.set_pixel(x, y, PIXEL_COLORS["BLUE"])
 
 def translate_temp(temp, old_min, old_max, new_min, new_max):
     old_range = (old_max - old_min)  
@@ -79,22 +70,27 @@ def translate_temp(temp, old_min, old_max, new_min, new_max):
 
     return new_value
 
-def shift_hours():
-    for x in xrange(0, 8):
-        for y in xrange(7, 0, -1):
-            sense.set_pixel(y, x, sense.get_pixel(y - 1, x))
+def shift_hours_left():
+    for y in xrange(0, 8):
+        for x in xrange(7, 0, -1):
+            sense.set_pixel(x, y, sense.get_pixel(x - 1, y))
 
-    clear_now()
+    set_rightmost_column_default()
 
-def clear_now(): # refactor to get info from separate config file, where min/max is defined
-    sense.set_pixel(0, 0, PIXEL_COLORS["NULL"])
-    sense.set_pixel(0, 1, PIXEL_COLORS["NULL"])
-    sense.set_pixel(0, 2, PIXEL_COLORS["NULL"])
-    sense.set_pixel(0, 3, PIXEL_COLORS["NULL"])
-    sense.set_pixel(0, 4, PIXEL_COLORS["NULL"])
-    sense.set_pixel(0, 5, PIXEL_COLORS["NULL"])
-    sense.set_pixel(0, 6, PIXEL_COLORS["YELLOW"])
-    sense.set_pixel(0, 7, PIXEL_COLORS["NULL"])
+def set_rightmost_column_default():
+    idx = MAX_TEMPERATURE
+    y_offset = PIXEL_DISPLAY_WIDTH
+
+    while idx >= MAX_TEMPERATURE - PIXEL_DISPLAY_WIDTH:
+        if idx == WARM_TEMPERATURE:
+            sense.set_pixel(0, y_offset, PIXEL_COLORS["YELLOW"])
+        elif idx == HOT_TEMPERATURE:
+            sense.set_pixel(0, y_offset, PIXEL_COLORS["RED"])
+        else:
+            sense.set_pixel(0, y_offset, PIXEL_COLORS["NULL"])
+
+        idx -= 1
+        y_offset -= 1
 
 def calc_indoor_temp():
     cpu_temp = int(float(get_cpu_temp()))
@@ -102,10 +98,10 @@ def calc_indoor_temp():
 
     return(ambient - ((cpu_temp - ambient) / 1.5))
 
-def get_weather_data():
+def get_weather_data(is_network_up):
     url = "https://api.darksky.net/forecast/{}/57.71,11.97?units=si".format(secrets.DARKSKY_API)
 
-    if network_is_up():
+    if is_network_up:
         r = requests.get(url)
 
         if r.status_code == 200:
@@ -138,7 +134,6 @@ def turn_off_display():
 def turn_on_display():
     sense.low_light = True
 
-
 now = datetime.now()
 turn_off_time = now.replace(hour = 22, minute = 0, second = 0, microsecond = 0)
 turn_on_time = now.replace(hour = 6, minute = 0, second = 0, microsecond = 0)
@@ -152,7 +147,8 @@ else:
 
 indoor_temp = calc_indoor_temp()
 indoor_rounded = round(indoor_temp)
-weather_data = get_weather_data()
+is_network_up = is_network_up()
+weather_data = get_weather_data(is_network_up)
 
 outdoor_temp = weather_data[0]
 precip = weather_data[1]
@@ -160,6 +156,18 @@ precip_type = weather_data[2]
 wind_speed = weather_data[3]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
+
+shift_hours_left()
+
+if is_network_up:
+    if indoor_rounded >= MIN_TEMPERATURE and indoor_rounded <= MAX_TEMPERATURE:
+        set_indoor(0, translate_temp(indoor_rounded, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7), PIXEL_COLORS["GREEN"])
+
+    if outdoor_temp >= MIN_TEMPERATURE and outdoor_temp <= MAX_TEMPERATURE:
+        set_outdoor(0, translate_temp(outdoor_temp, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7))
+
+else:
+    set_indoor(0, translate_temp(indoor_rounded, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7), PIXEL_COLORS["WHITE"])
 
 json_output = { "indoorTemperature": "{:2.1f}".format(indoor_temp),
         "outdoorTemperature": "{:2.1f}".format(outdoor_temp),
@@ -172,12 +180,3 @@ json_output = { "indoorTemperature": "{:2.1f}".format(indoor_temp),
         "timestamp": str(now) }
 
 print(json.dumps(json_output))
-
-shift_hours()
-
-if indoor_rounded >= MIN_TEMPERATURE and indoor_rounded <= MAX_TEMPERATURE:
-    set_indoor(0, translate_temp(indoor_rounded, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7))
-
-if outdoor_temp != int(ERROR_CODES["API_ERROR"]) and outdoor_temp != int(ERROR_CODES["NO_NETWORK"]):
-    if outdoor_temp >= MIN_TEMPERATURE and outdoor_temp <= MAX_TEMPERATURE:
-        set_outdoor(0, translate_temp(outdoor_temp, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7))
