@@ -3,11 +3,10 @@
 from sense_hat import SenseHat, ACTION_PRESSED, ACTION_HELD, ACTION_RELEASED
 import signal
 import sys
-import os
-import urllib2
 import time
 import binary_clock
 import enum
+import utils
 #import fetch_from_db
 
 class Clock(enum.Enum):
@@ -21,17 +20,6 @@ def set_clock(state):
 def clock_status():
     global is_clock_on
     return is_clock_on
-
-def get_cpu_temp():
-    res = os.popen("vcgencmd measure_temp").readline()
-
-    return(res.replace("temp=","").replace("'C\n",""))
-
-def calc_indoor_temp():
-    cpu_temp = int(float(get_cpu_temp()))
-    ambient = sense.get_temperature_from_pressure()
-
-    return(ambient - ((cpu_temp - ambient) / 1.5))
 
 def toggle_display():
     if sense.low_light: # display is on
@@ -67,9 +55,9 @@ def show_clock():
         for elem_idx, elem in enumerate(binary_time_array):
             for bit_idx, bit in enumerate(elem):
                 if bit == "1":
-                    sense.set_pixel(x_coordinate_offset, y_coordinate_offset, 0, 255, 0)
+                    sense.set_pixel(x_coordinate_offset, y_coordinate_offset, utils.PIXEL_COLORS["GREEN"])
                 else:
-                    sense.set_pixel(x_coordinate_offset, y_coordinate_offset, 10, 0, 0)
+                    sense.set_pixel(x_coordinate_offset, y_coordinate_offset, utils.PIXEL_COLORS["RED"])
 
                 y_coordinate_offset = y_coordinate_offset - 1
 
@@ -83,7 +71,7 @@ def show_clock():
             elif event.direction == "down" and event.action == "pressed":
                 toggle_display()
 
-        time.sleep(0.9)
+        time.sleep(0.2)
 
 def show_current_temp_handler(event):
     if event.action != ACTION_RELEASED:
@@ -95,7 +83,7 @@ def show_current_temp_handler(event):
             
         save_graph()
         sense.rotation = 180
-        indoor_temp = round(calc_indoor_temp(), 1)
+        indoor_temp = round(utils.calc_indoor_temp(), 1)
         sense.show_message(str(indoor_temp), text_colour=[255,255,0])
         sense.rotation = 0
         restore_graph()
