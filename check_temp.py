@@ -97,7 +97,7 @@ else:
 
 indoor_temp = utils.calc_indoor_temp()
 indoor_rounded = round(indoor_temp)
-is_network_up = utils.is_network_up(True)
+is_network_up = utils.is_network_up()
 weather_data = get_weather_data(is_network_up)
 
 outdoor_temp = weather_data[0]
