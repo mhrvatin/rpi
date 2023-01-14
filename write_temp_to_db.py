@@ -1,5 +1,6 @@
 from datetime import datetime
 from peewee import * 
+from utils import is_network_up
 import json
 import httplib
 import secrets
@@ -27,23 +28,10 @@ def log_data(data):
     with open("upload.log", "a") as log:
         log.write("{} {} \n".format(str(datetime.now()), data))
 
-def network_is_up():
-    conn = httplib.HTTPConnection("www.google.com", timeout = 5)
-
-    try:
-        conn.request("HEAD", "/")
-        conn.close()
-        
-        return True
-    except:
-        conn.close()
-
-        return False
-
 with open("apartment_data_buffer.json") as f:
     buffered_data = f.readlines()
 
-if network_is_up():
+if is_network_up():
     db.connect() 
 
     for raw_data in buffered_data:
@@ -59,9 +47,10 @@ if network_is_up():
                     address = json_data["address"],
                     date = json_data["timestamp"])
         apartment.save()
+        
+        log_data("Upload successfull with data {}".format(json.dumps(buffered_data)))
+        
     db.close()
-            
-    log_data("Upload successfull with data {}".format(buffered_data))
 
     # flush buffer
     open("apartment_data_buffer.json", "w").close()
