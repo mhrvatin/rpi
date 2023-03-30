@@ -26,7 +26,7 @@ class Apartment_data(Model):
 
 def log_data(data):
     with open("upload.log", "a") as log:
-        log.write("{} {} \n".format(str(datetime.now()), data))
+        log.write("{} {}\n".format(str(datetime.now()), data))
 
 with open("apartment_data_buffer.json") as f:
     buffered_data = f.readlines()
@@ -48,7 +48,7 @@ if is_network_up():
                     date = json_data["timestamp"])
         apartment.save()
         
-        log_data("Upload successfull with data {}".format(json.dumps(buffered_data)))
+        log_data("Upload successfull with data {}".format(json.dumps(json_data)))
         
     db.close()
 

@@ -7,8 +7,8 @@ import requests
 import secrets
 import utils
 
-ADDRESS = "Träkilsgatan 46"
-MAX_TEMPERATURE = 28
+ADDRESS = "Smörkärnegatan 25"
+MAX_TEMPERATURE = 26
 MIN_TEMPERATURE = MAX_TEMPERATURE - 7
 
 def indoor_color_already_written_to_pixel(x, y):
@@ -49,7 +49,7 @@ def set_rightmost_column_default():
         y_offset -= 1
 
 def get_weather_data(is_network_up):
-    url = "https://api.darksky.net/forecast/{}/57.71,11.97?units=si".format(secrets.DARKSKY_API)
+    url = "http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(secrets.API_KEY, secrets.LAT_LONG)
 
     if is_network_up:
         r = requests.get(url)
@@ -57,12 +57,12 @@ def get_weather_data(is_network_up):
         if r.status_code == 200:
             data = json.loads(r.text)
 
-            temp = data["currently"]["temperature"]
-            wind_speed = data["currently"]["windSpeed"]
-            precip = float(data["currently"]["precipIntensity"])
+            temp = data["current"]["temp_c"]
+            wind_speed = data["current"]["wind_kph"]
+            precip = float(data["current"]["precip_mm"])
             
             if precip > 0:
-                precip_type = data["currently"]["precipType"]
+                precip_type = data["current"]["condition"]["text"]
             else:
                 precip_type = None
 
