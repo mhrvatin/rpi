@@ -7,15 +7,6 @@ def draw_reference_lines(max_temp):
             if utils.pixel_is(sense, x, row, utils.PIXEL_COLORS["NULL"]):
                 sense.set_pixel(x, row, color)
 
-def remove_reference_lines():
-    colors = [utils.PIXEL_COLORS[name]
-              for name in utils.REFERENCE_TEMPERATURES.values()]
-
-    for x in range(0, 8):
-        for y in range(0, 8):
-            if any(utils.pixel_is(sense, x, y, color) for color in colors):
-                sense.set_pixel(x, y, utils.PIXEL_COLORS["NULL"])
-
 sense = utils.get_sense()
 
 max_temp = utils.max_temperature()
