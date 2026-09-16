@@ -1,4 +1,4 @@
-from datetime import *
+from datetime import datetime, timedelta
 from peewee import *
 from playhouse.shortcuts import model_to_dict
 import json
@@ -19,53 +19,49 @@ class Apartment_data(Model):
         database = db
 
 def fetch_latest(limit=7):
-    if utils.network_is_up():
-        db.connect()
+    """The most recent readings as JSON, or None with no network."""
+    if not utils.is_network_up():
+        return None
 
-        temperature_data = Apartment_data\
+    db.connect()
+
+    try:
+        # The query is lazy, so it has to be read while the connection is
+        # still open. Closing first and iterating afterwards fails.
+        rows = list(Apartment_data
                 .select(Apartment_data.indoor_temperature,
                     Apartment_data.outdoor_temperature,
-                    Apartment_data.date)\
-                .limit(limit)\
+                    Apartment_data.date)
                 .order_by(Apartment_data.date.desc())
-
-        '''for row in temperature_data:
-            print row.indoor_temperature
-            print row.outdoor_temperature
-            print row.date
-            print "--------"'''
-
+                .limit(limit))
+    finally:
         db.close()
 
-        return json.dumps([model_to_dict(e) for e in temperature_data], indent=4, default=str)
+    return json.dumps([model_to_dict(row) for row in rows],
+                      indent=4, default=str)
 
-def fetch_left(offset): # wip
-    if network_is_up():
-        now = datetime.now()
-        lower_bound = now.replace(minute = 0, second = 0, microsecond = 0)
-        upper_bound = now.replace(minute = 59, second = 59, microsecond = 59)
-        delta = timedelta(hours = offset)
-        lower_diff = lower_bound - delta
-        upper_diff = upper_bound - delta
+def fetch_left(offset): # not wired up to anything yet
+    """The reading from `offset` hours ago, or None with no network."""
+    if not utils.is_network_up():
+        return None
 
-        lower_bound_string = lower_diff.strftime("%Y-%m-%d %H:%M:%S")
-        upper_bound_string = upper_diff.strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now()
+    delta = timedelta(hours = offset)
+    lower_bound = now.replace(minute = 0, second = 0, microsecond = 0) - delta
+    upper_bound = now.replace(minute = 59, second = 59,
+                              microsecond = 999999) - delta
 
-        db.connect()
+    db.connect()
 
-        temperature_data = (Apartment_data
+    try:
+        rows = list(Apartment_data
                 .select(Apartment_data.indoor_temperature,
                     Apartment_data.outdoor_temperature)
-                .where(Apartment_data.date >= lower_bound_string and
-                    Apartment_data.date <= upper_bound_string)
-                .limit(1)
-                .order_by(Apartment_data.date.desc()))
-
-        '''for row in temperature_data:
-            print row.indoor_temperature
-            print row.outdoor_temperature
-            print "--------"'''
-
+                .where((Apartment_data.date >= lower_bound) &
+                    (Apartment_data.date <= upper_bound))
+                .order_by(Apartment_data.date.desc())
+                .limit(1))
+    finally:
         db.close()
 
-        return temperature_data
+    return rows
