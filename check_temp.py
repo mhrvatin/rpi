@@ -37,7 +37,13 @@ def get_weather_data(is_network_up):
     url = "http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(config.API_KEY, config.LAT_LONG)
 
     if is_network_up:
-        r = requests.get(url)
+        try:
+            r = requests.get(url, timeout = utils.NETWORK_TIMEOUT)
+        except requests.exceptions.RequestException:
+            return [utils.ERROR_CODES["API_ERROR"],
+                    utils.ERROR_CODES["API_ERROR"],
+                    "api error",
+                    utils.ERROR_CODES["API_ERROR"]]
 
         if r.status_code == 200:
             data = json.loads(r.text)

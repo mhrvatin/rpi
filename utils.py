@@ -19,6 +19,9 @@ REFERENCE_TEMPERATURES = {
     HOT_TEMPERATURE: "RED"
 }
 
+# Seconds to wait on any network call before giving up.
+NETWORK_TIMEOUT = 5
+
 # How many ambient readings to average, and the pause between them.
 SENSOR_READ_COUNT = 3
 SENSOR_READ_DELAY = 0.5
@@ -61,7 +64,8 @@ def is_network_up(debug=False):
     if debug:
         return True
     else:
-        conn = http.client.HTTPConnection("www.google.com", timeout = 5)
+        conn = http.client.HTTPConnection("www.google.com",
+                                          timeout = NETWORK_TIMEOUT)
 
         try:
             conn.request("HEAD", "/")
