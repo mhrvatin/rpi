@@ -6,13 +6,21 @@ import os
 import sys
 import config
 
+# Seconds before a stalled database call gives up. Without this a run can
+# hang past its hour and overlap the next one, which is how the same pending
+# file gets uploaded twice.
+DB_TIMEOUT = 30
+
 BUFFER = "apartment_data_buffer.json"
 PENDING = "apartment_data_buffer.pending.json"
 
 db = MySQLDatabase(config.DB,
                    host = config.HOST,
                    user = config.USER,
-                   passwd = config.PASS)
+                   passwd = config.PASS,
+                   connect_timeout = DB_TIMEOUT,
+                   read_timeout = DB_TIMEOUT,
+                   write_timeout = DB_TIMEOUT)
 
 class Apartment_data(Model):
     indoor_temperature = DoubleField()
@@ -87,13 +95,19 @@ try:
     # to be inserted a second time when the file is retried.
     with db.atomic():
         for raw_data in buffered_data:
+            # A line that will not parse, or that parses but is missing a
+            # field, is skipped. Letting it raise would strand the file and
+            # stall every later upload behind it, for good. A save() failure
+            # is a different thing: that is the database's problem, so it
+            # aborts the batch and the file is retried whole.
             try:
                 json_data = json.loads(raw_data)
-            except ValueError:
+                row = row_from(json_data)
+            except (ValueError, KeyError, TypeError):
                 skipped.append(raw_data)
                 continue
 
-            row_from(json_data).save()
+            row.save()
             uploaded.append(json_data)
 except Exception as error:
     log_data("Upload failed, keeping {} for the next run: {}".format(pending, error))

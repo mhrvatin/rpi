@@ -24,6 +24,10 @@ REFERENCE_TEMPERATURES = {
     HOT_TEMPERATURE: "RED"
 }
 
+# Remembers the scale the graph on the display was drawn against, so a
+# change of scale can be spotted and the graph moved to match it.
+SCALE_STATE = "scale_top.txt"
+
 # Writing a gamma table of all zeroes is how the display is turned off. A
 # low-light table turns it back on.
 DISPLAY_OFF_GAMMA = [0] * 32
@@ -148,10 +152,6 @@ def max_temperature(when=None):
 
     return WARM_TEMPERATURE
 
-def min_temperature(when=None):
-    """Bottom of the displayed scale, which follows from the top."""
-    return max_temperature(when) - PIXEL_DISPLAY_WIDTH
-
 def shift_scale(sense, current_max, new_max):
     """Move the graph already on the display onto a different scale.
 
@@ -173,6 +173,23 @@ def shift_scale(sense, current_max, new_max):
                 for y in range(PIXEL_DISPLAY_WIDTH, 0, -1):
                     sense.set_pixel(x, y, sense.get_pixel(x, y - 1))
                     sense.set_pixel(x, y - 1, PIXEL_COLORS["NULL"])
+
+def read_scale_top():
+    """The top of the scale the display was last drawn against, or None."""
+    try:
+        with open(SCALE_STATE, encoding="utf-8") as state:
+            return int(state.read().strip())
+    except (OSError, ValueError):
+        return None
+
+def write_scale_top(max_temp):
+    """Record the scale the display now shows.
+
+    Every path that redraws the display has to call this, or the next run
+    will think the scale changed and shift a graph that is already right.
+    """
+    with open(SCALE_STATE, "w", encoding="utf-8") as state:
+        state.write("{}\n".format(max_temp))
 
 def reference_rows(max_temp):
     """Return {row: color} for the reference lines a scale can display.

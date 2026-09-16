@@ -49,8 +49,17 @@ hold the old 98 and 99 degree error values. To label and clear those:
 UPDATE apartment_data SET status = 'api_error' WHERE outdoor_temperature = 98.0;
 UPDATE apartment_data SET status = 'no_network' WHERE outdoor_temperature = 99.0;
 UPDATE apartment_data SET outdoor_temperature = NULL, precipitation = NULL,
-    wind_speed = NULL WHERE status <> 'ok';
+    wind_speed = NULL, precipitation_type = NULL WHERE status <> 'ok';
 ```
+
+`precipitation_type` is cleared along with the numbers because the old code
+put the reason there, as the string `api error` or `no network`. Left alone
+it would mix those in with real weather conditions.
+
+Run the UPDATE statements **after** the first upload, not before. Whatever
+is sitting in the buffer when the new code goes on still carries the old 98
+and 99 values and has no status of its own, so it uploads as `ok`. Running
+the updates afterwards catches those rows too.
 
 Rolling back a failed upload needs InnoDB, which is the default. Check with
 `SHOW TABLE STATUS LIKE 'apartment_data'` if in doubt.
@@ -87,10 +96,12 @@ Which lines are showing says which scale is in force, so the display reads
 correctly without having to remember the month.
 
 `python3 clear_screen.py` clears the display and draws the marker lines for
-the current scale. Pass the previous top temperature to shift a graph onto
-the current scale by hand, which is only needed to put a display right, for
-instance on the first run after deploying when `scale_top.txt` does not
-exist yet.
+the current scale. `python3 clear_screen.py --from-top 26` shifts the graph
+already on the display from a top of 26 onto the current scale instead of
+clearing it. That is only needed to put a display right by hand, for
+instance on the first run after deploying, when `scale_top.txt` does not
+exist yet. Either form records the scale it drew, so the next hourly run
+does not shift a display that is already correct.
 
 ## Joystick
 

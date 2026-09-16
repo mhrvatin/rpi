@@ -7,22 +7,6 @@ import utils
 
 ADDRESS = "Smörkärnegatan 25"
 
-# Remembers the scale the graph on the display was drawn against, so a
-# change of scale can be spotted and the graph moved to match.
-SCALE_STATE = "scale_top.txt"
-
-def read_previous_max():
-    """The top of the scale the last run drew against, or None if unknown."""
-    try:
-        with open(SCALE_STATE, encoding="utf-8") as state:
-            return int(state.read().strip())
-    except (OSError, ValueError):
-        return None
-
-def write_current_max(max_temp):
-    with open(SCALE_STATE, "w", encoding="utf-8") as state:
-        state.write("{}\n".format(max_temp))
-
 def indoor_color_already_written_to_pixel(x, y):
     return utils.pixel_is(sense, x, y, utils.PIXEL_COLORS["GREEN"])
 
@@ -58,7 +42,7 @@ def no_weather_data(status):
             "wind_speed": None}
 
 def get_weather_data(is_network_up):
-    url = "http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(config.API_KEY, config.LAT_LONG)
+    url = "https://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(config.API_KEY, config.LAT_LONG)
 
     if not is_network_up:
         return no_weather_data(utils.STATUS_NO_NETWORK)
@@ -153,12 +137,10 @@ wind_speed = weather_data["wind_speed"]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
 
-previous_max = read_previous_max()
+previous_max = utils.read_scale_top()
 
 if previous_max is not None and previous_max != MAX_TEMPERATURE:
     utils.shift_scale(sense, previous_max, MAX_TEMPERATURE)
-
-write_current_max(MAX_TEMPERATURE)
 
 shift_hours_left()
 
@@ -172,6 +154,10 @@ if temp_is_displayable(indoor_rounded):
 
 if temp_is_displayable(outdoor_temp):
     set_outdoor(0, temp_to_pixel_row(outdoor_temp))
+
+# Recorded after the drawing, so a failure part way through cannot leave the
+# file claiming a scale the display was never actually moved to.
+utils.write_scale_top(MAX_TEMPERATURE)
 
 json_output = { "indoorTemperature": format_reading(indoor_temp),
         "outdoorTemperature": format_reading(outdoor_temp),

@@ -3,6 +3,7 @@ apartment_data_buffer*
 backup/*
 *.png
 config.py
+secrets.py
 test-hat.py
 test.py
 *.log

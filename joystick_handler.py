@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from sense_hat import ACTION_RELEASED
+from sense_hat import ACTION_PRESSED
 import queue
 import signal
 import sys
@@ -30,7 +30,9 @@ CLOCK_ORIGIN_Y = 5
 presses = queue.Queue()
 
 def remember_press(event):
-    if event.action != ACTION_RELEASED:
+    # The initial press only. Holding a direction also delivers repeats, and
+    # queueing those replays the lot the moment a blocking action returns.
+    if event.action == ACTION_PRESSED:
         presses.put(event.direction)
 
 def next_press(timeout):
@@ -39,6 +41,14 @@ def next_press(timeout):
         return presses.get(timeout = timeout)
     except queue.Empty:
         return None
+
+def drain_presses():
+    """Discard whatever was pressed during a blocking action."""
+    while True:
+        try:
+            presses.get_nowait()
+        except queue.Empty:
+            return
 
 def display_is_on():
     return sense.low_light
@@ -132,7 +142,9 @@ while True:
 
     if direction == "up":
         show_temperature()
+        drain_presses()
     elif direction == "down":
         toggle_display()
     elif direction == "middle":
         show_clock()
+        drain_presses()
