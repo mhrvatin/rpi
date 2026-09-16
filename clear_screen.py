@@ -16,40 +16,27 @@ def remove_reference_lines():
             if any(utils.pixel_is(sense, x, y, color) for color in colors):
                 sense.set_pixel(x, y, utils.PIXEL_COLORS["NULL"])
 
-def shift_hours(current_max, new_max):
-    steps = current_max - new_max
-    delta = abs(steps)
-
-    for i in range(0, delta):
-        for x in range(0, 8):
-            if steps < 0: #shift down
-                for y in range(0, 7):
-                    sense.set_pixel(x, y, sense.get_pixel(x, y + 1))
-                    sense.set_pixel(x, y + 1, utils.PIXEL_COLORS["NULL"])
-            elif steps > 0: #shift up
-                for y in range(7, 0, -1):
-                    sense.set_pixel(x, y, sense.get_pixel(x, y - 1))
-                    sense.set_pixel(x, y - 1, utils.PIXEL_COLORS["NULL"])
-
 sense = utils.get_sense()
+
+max_temp = utils.max_temperature()
 
 if len(sys.argv) == 1:
     sense.clear()
-    draw_reference_lines(utils.MAX_TEMPERATURE)
+    draw_reference_lines(max_temp)
 elif len(sys.argv) == 2:
     old_max_temp = int(sys.argv[1])
 
-    shift_hours(old_max_temp, utils.MAX_TEMPERATURE)
-    draw_reference_lines(utils.MAX_TEMPERATURE)
+    utils.shift_scale(sense, old_max_temp, max_temp)
+    draw_reference_lines(max_temp)
 else:
     print("Invalid arguments", file=sys.stderr)
     print("""Usage: python3 clear_screen.py [old_max_temp]
 
     With no argument, clear the display and draw the reference lines for the
-    current scale, whose top is utils.MAX_TEMPERATURE ({}).
+    scale the time of year calls for, whose top is currently {}.
 
-    With old_max_temp, shift the graph already on the display to line up
-    with the current scale, then draw the reference lines. Use this after
-    changing MAX_TEMPERATURE in utils.py.""".format(utils.MAX_TEMPERATURE),
+    With old_max_temp, shift the graph already on the display from that top
+    onto the current one first. check_temp.py does this by itself when the
+    season turns, so this is only for putting a display right by hand.""".format(max_temp),
           file=sys.stderr)
     sys.exit(1)

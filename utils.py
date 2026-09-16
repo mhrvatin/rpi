@@ -1,17 +1,22 @@
 import http.client
 import os
 import time
+from datetime import datetime
 from sense_hat import SenseHat
 
 PIXEL_DISPLAY_WIDTH = 7
+
+# Socialstyrelsen's indoor limits: 26 degrees over a sustained period, 28
+# during a heat wave. Neither of them ever moves.
 WARM_TEMPERATURE = 26
 HOT_TEMPERATURE = 28
 
-# Top of the displayed scale. Defined here so the scripts that draw the
-# graph and the ones that read it cannot drift apart. The bottom of the
-# scale follows from the height of the display.
-MAX_TEMPERATURE = 26
-MIN_TEMPERATURE = MAX_TEMPERATURE - PIXEL_DISPLAY_WIDTH
+# Months when a heat wave is plausible here. During those the scale is
+# topped at 28, which puts the heat wave line on the top row. The rest of
+# the year it is topped at 26, which puts the sustained limit on the top
+# row and buys two more rows at the cold end, where the readings actually
+# sit. Keeping the 26 line on screen is what stops the top going any lower.
+HEAT_WAVE_MONTHS = (5, 6, 7, 8, 9)
 
 # Temperatures that get a marker line drawn across the display.
 REFERENCE_TEMPERATURES = {
@@ -132,6 +137,42 @@ def calc_indoor_temp():
     ambient = read_ambient_temp()
 
     return ambient - ((cpu_temp - ambient) / CPU_TEMP_FACTOR)
+
+def max_temperature(when=None):
+    """Top of the displayed scale for the time of year."""
+    if when is None:
+        when = datetime.now()
+
+    if when.month in HEAT_WAVE_MONTHS:
+        return HOT_TEMPERATURE
+
+    return WARM_TEMPERATURE
+
+def min_temperature(when=None):
+    """Bottom of the displayed scale, which follows from the top."""
+    return max_temperature(when) - PIXEL_DISPLAY_WIDTH
+
+def shift_scale(sense, current_max, new_max):
+    """Move the graph already on the display onto a different scale.
+
+    Each row stands for a temperature, so changing the top of the scale
+    moves every reading to a different row. Rows pushed past an edge are
+    lost, which is inherent in rescaling and happened just the same when
+    this was done by hand.
+    """
+    steps = current_max - new_max
+    delta = abs(steps)
+
+    for _ in range(0, delta):
+        for x in range(0, 8):
+            if steps < 0: # the top went up, so readings move toward row 0
+                for y in range(0, PIXEL_DISPLAY_WIDTH):
+                    sense.set_pixel(x, y, sense.get_pixel(x, y + 1))
+                    sense.set_pixel(x, y + 1, PIXEL_COLORS["NULL"])
+            elif steps > 0: # the top came down, so they move the other way
+                for y in range(PIXEL_DISPLAY_WIDTH, 0, -1):
+                    sense.set_pixel(x, y, sense.get_pixel(x, y - 1))
+                    sense.set_pixel(x, y - 1, PIXEL_COLORS["NULL"])
 
 def reference_rows(max_temp):
     """Return {row: color} for the reference lines a scale can display.

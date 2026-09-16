@@ -57,15 +57,40 @@ Rolling back a failed upload needs InnoDB, which is the default. Check with
 
 ## Display
 
-The graph plots one column per hour, newest on the left, over a scale whose
-top is `MAX_TEMPERATURE` in `utils.py`. Indoor is green, outdoor is blue,
-purple where the two land on the same pixel, and white when the Pi could not
-reach the network. Marker lines come from `REFERENCE_TEMPERATURES`; a
-threshold above the top of the scale is simply not drawn.
+The graph plots one column per hour, newest on the left, one row per degree.
+Indoor is green, outdoor is blue, purple where the two land on the same
+pixel, and white when the Pi could not reach the network.
 
-Run `python3 clear_screen.py` to clear the display and draw the marker
-lines. After changing `MAX_TEMPERATURE`, pass the previous top temperature
-to shift the graph already on the display onto the new scale.
+The two marker lines are Socialstyrelsen's indoor limits: yellow at 26
+degrees for a sustained period, red at 28 during a heat wave. Those numbers
+never change. What changes is the top of the scale, and only between those
+same two values:
+
+| Months | Top | Range | Lines shown |
+| --- | --- | --- | --- |
+| May to September | 28 | 21-28 | red on the top row, yellow on row 5 |
+| the rest | 26 | 19-26 | yellow on the top row |
+
+Outside a heat wave the room never approaches 28, so a scale reaching that
+high wastes two rows. Topping out at 26 spends them at the cold end instead,
+where the readings are, and still keeps the sustained limit in view. The top
+cannot go below 26 without pushing the yellow line off the display.
+
+`check_temp.py` picks the top from the month, so the switch happens on its
+own. It remembers the scale it last drew against in `scale_top.txt` and
+shifts the graph already on the display when that changes. Readings pushed
+past an edge by the shift are lost from the display; the database keeps
+absolute temperatures either way. Change the months in `HEAT_WAVE_MONTHS`
+in `utils.py`.
+
+Which lines are showing says which scale is in force, so the display reads
+correctly without having to remember the month.
+
+`python3 clear_screen.py` clears the display and draws the marker lines for
+the current scale. Pass the previous top temperature to shift a graph onto
+the current scale by hand, which is only needed to put a display right, for
+instance on the first run after deploying when `scale_top.txt` does not
+exist yet.
 
 ## Joystick
 

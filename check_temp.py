@@ -7,6 +7,22 @@ import utils
 
 ADDRESS = "Smörkärnegatan 25"
 
+# Remembers the scale the graph on the display was drawn against, so a
+# change of scale can be spotted and the graph moved to match.
+SCALE_STATE = "scale_top.txt"
+
+def read_previous_max():
+    """The top of the scale the last run drew against, or None if unknown."""
+    try:
+        with open(SCALE_STATE, encoding="utf-8") as state:
+            return int(state.read().strip())
+    except (OSError, ValueError):
+        return None
+
+def write_current_max(max_temp):
+    with open(SCALE_STATE, "w", encoding="utf-8") as state:
+        state.write("{}\n".format(max_temp))
+
 def indoor_color_already_written_to_pixel(x, y):
     return utils.pixel_is(sense, x, y, utils.PIXEL_COLORS["GREEN"])
 
@@ -27,7 +43,7 @@ def shift_hours_left():
     set_rightmost_column_default()
 
 def set_rightmost_column_default():
-    reference_rows = utils.reference_rows(utils.MAX_TEMPERATURE)
+    reference_rows = utils.reference_rows(MAX_TEMPERATURE)
 
     for row in range(0, utils.PIXEL_DISPLAY_WIDTH + 1):
         sense.set_pixel(0, row,
@@ -81,7 +97,7 @@ def temp_is_displayable(temp):
     if temp is None:
         return False
 
-    return utils.MIN_TEMPERATURE <= temp <= utils.MAX_TEMPERATURE
+    return MIN_TEMPERATURE <= temp <= MAX_TEMPERATURE
 
 def format_reading(value):
     """One decimal place, or null when the reading did not happen."""
@@ -96,7 +112,7 @@ def temp_to_pixel_row(temp):
     `translate_temp` returns a float, and Python 3 rejects a float offset
     when seeking in the framebuffer, so `set_pixel` needs an int.
     """
-    row = utils.translate_temp(temp, utils.MIN_TEMPERATURE, utils.MAX_TEMPERATURE,
+    row = utils.translate_temp(temp, MIN_TEMPERATURE, MAX_TEMPERATURE,
                                0, utils.PIXEL_DISPLAY_WIDTH)
 
     return int(round(row))
@@ -108,6 +124,12 @@ def turn_on_display():
     sense.low_light = True
 
 now = datetime.now()
+
+# Fixed for the whole run, so a run that straddles the turn of a month
+# cannot draw half of itself against each scale.
+MAX_TEMPERATURE = utils.max_temperature(now)
+MIN_TEMPERATURE = MAX_TEMPERATURE - utils.PIXEL_DISPLAY_WIDTH
+
 turn_off_time = now.replace(hour = 22, minute = 0, second = 0, microsecond = 0)
 turn_on_time = now.replace(hour = 6, minute = 0, second = 0, microsecond = 0)
 
@@ -130,6 +152,13 @@ precip_type = weather_data["precip_type"]
 wind_speed = weather_data["wind_speed"]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
+
+previous_max = read_previous_max()
+
+if previous_max is not None and previous_max != MAX_TEMPERATURE:
+    utils.shift_scale(sense, previous_max, MAX_TEMPERATURE)
+
+write_current_max(MAX_TEMPERATURE)
 
 shift_hours_left()
 
