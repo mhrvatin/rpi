@@ -40,10 +40,11 @@ PIXEL_COLORS = {
     "WHITE": [255, 255, 255]
 }
 
-ERROR_CODES = {
-    "API_ERROR": 98.0,
-    "NO_NETWORK": 99.0
-}
+# Recorded with every row, so a missing outdoor reading can be told apart
+# from a working one, and a dead API from a Pi that was offline.
+STATUS_OK = "ok"
+STATUS_API_ERROR = "api_error"
+STATUS_NO_NETWORK = "no_network"
 
 _sense = None
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 from peewee import *
-from utils import is_network_up
+from utils import is_network_up, STATUS_OK
 import json
 import config
 
@@ -11,13 +11,14 @@ db = MySQLDatabase(config.DB,
 
 class Apartment_data(Model):
     indoor_temperature = DoubleField()
-    outdoor_temperature = DoubleField()
-    precipitation = DoubleField()
-    precipitation_type = CharField(120)
-    wind_speed = DoubleField()
+    outdoor_temperature = DoubleField(null = True)
+    precipitation = DoubleField(null = True)
+    precipitation_type = CharField(120, null = True)
+    wind_speed = DoubleField(null = True)
     humidity = DoubleField()
     pressure = DoubleField()
     address = CharField(120)
+    status = CharField(20)
     date = DateTimeField()
 
     class Meta:
@@ -44,6 +45,7 @@ if is_network_up():
                     humidity = json_data["humidity"],
                     pressure = json_data["pressure"],
                     address = json_data["address"],
+                    status = json_data.get("status", STATUS_OK),
                     date = json_data["timestamp"])
         apartment.save()
 
