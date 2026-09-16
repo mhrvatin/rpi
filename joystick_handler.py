@@ -106,18 +106,18 @@ def pushed_left(event):
     global time_offset
 
     if event.action != ACTION_RELEASED:
-        print "pushed left"
+        print("pushed left")
 
         time_offset += 1
         rows = fetch_from_db.fetch_left(time_offset)
         for row in rows:
-            print row.indoor_temperature
-            print row.outdoor_temperature
+            print(row.indoor_temperature)
+            print(row.outdoor_temperature)
 
 
 def pushed_right(event):
     if event.action != ACTION_RELEASED:
-        print "pushed right"
+        print("pushed right")
 
 def signal_handler(signal, frame):
     sys.exit(0)

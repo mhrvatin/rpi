@@ -6,4 +6,7 @@
   * `sudo vim /etc/apt/sources.list`
 5. Update certificates `sudo apt update && sudo apt install ca-certificates`
 6. Clone this repo
-7. Copy files to `~` and update secrets
+7. Copy files to `~`
+8. Copy `config.example` to `config.py` and fill in the credentials
+
+The scripts require Python 3.

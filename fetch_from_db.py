@@ -1,15 +1,14 @@
 from datetime import *
 from peewee import *
 from playhouse.shortcuts import model_to_dict
-import httplib
 import json
-import secrets
+import config
 import utils
 
-db = MySQLDatabase(secrets.DB,
-                   host = secrets.HOST,
-                   user = secrets.USER,
-                   passwd = secrets.PASS)
+db = MySQLDatabase(config.DB,
+                   host = config.HOST,
+                   user = config.USER,
+                   passwd = config.PASS)
 
 class Apartment_data(Model):
     indoor_temperature = DoubleField()

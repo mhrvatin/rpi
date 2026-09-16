@@ -2,13 +2,12 @@ from datetime import datetime
 from peewee import * 
 from utils import is_network_up
 import json
-import httplib
-import secrets
+import config
 
-db = MySQLDatabase(secrets.DB,
-                   host = secrets.HOST,
-                   user = secrets.USER,
-                   passwd = secrets.PASS)
+db = MySQLDatabase(config.DB,
+                   host = config.HOST,
+                   user = config.USER,
+                   passwd = config.PASS)
 
 class Apartment_data(Model):
     indoor_temperature = DoubleField()
@@ -25,10 +24,10 @@ class Apartment_data(Model):
         database = db
 
 def log_data(data):
-    with open("upload.log", "a") as log:
+    with open("upload.log", "a", encoding="utf-8") as log:
         log.write("{} {}\n".format(str(datetime.now()), data))
 
-with open("apartment_data_buffer.json") as f:
+with open("apartment_data_buffer.json", encoding="utf-8") as f:
     buffered_data = f.readlines()
 
 if is_network_up():

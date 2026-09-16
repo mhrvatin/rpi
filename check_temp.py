@@ -1,10 +1,9 @@
-#!/usr/bin/python2.7
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 from sense_hat import SenseHat
 from datetime import datetime
 import json
 import requests
-import secrets
+import config
 import utils
 
 ADDRESS = "Smörkärnegatan 25"
@@ -27,8 +26,8 @@ def set_outdoor(x, y):
         sense.set_pixel(x, y, utils.PIXEL_COLORS["BLUE"])
 
 def shift_hours_left():
-    for y in xrange(0, 8):
-        for x in xrange(7, 0, -1):
+    for y in range(0, 8):
+        for x in range(7, 0, -1):
             sense.set_pixel(x, y, sense.get_pixel(x - 1, y))
 
     set_rightmost_column_default()
@@ -49,7 +48,7 @@ def set_rightmost_column_default():
         y_offset -= 1
 
 def get_weather_data(is_network_up):
-    url = "http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(secrets.API_KEY, secrets.LAT_LONG)
+    url = "http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(config.API_KEY, config.LAT_LONG)
 
     if is_network_up:
         r = requests.get(url)
@@ -77,6 +76,17 @@ def get_weather_data(is_network_up):
             utils.ERROR_CODES["NO_NETWORK"],
             "no network",
             utils.ERROR_CODES["NO_NETWORK"]]
+
+def temp_to_pixel_row(temp):
+    """Map a temperature onto a display row.
+
+    `translate_temp` returns a float, and Python 3 rejects a float offset
+    when seeking in the framebuffer, so `set_pixel` needs an int.
+    """
+    row = utils.translate_temp(temp, MIN_TEMPERATURE, MAX_TEMPERATURE,
+                               0, utils.PIXEL_DISPLAY_WIDTH)
+
+    return int(round(row))
 
 def turn_off_display():
     sense.gamma = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -111,13 +121,13 @@ shift_hours_left()
 
 if is_network_up:
     if indoor_rounded >= MIN_TEMPERATURE and indoor_rounded <= MAX_TEMPERATURE:
-        set_indoor(0, utils.translate_temp(indoor_rounded, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7), utils.PIXEL_COLORS["GREEN"])
+        set_indoor(0, temp_to_pixel_row(indoor_rounded), utils.PIXEL_COLORS["GREEN"])
 
     if outdoor_temp >= MIN_TEMPERATURE and outdoor_temp <= MAX_TEMPERATURE:
-        set_outdoor(0, utils.translate_temp(outdoor_temp, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7))
+        set_outdoor(0, temp_to_pixel_row(outdoor_temp))
 
 else:
-    set_indoor(0, utils.translate_temp(indoor_rounded, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7), utils.PIXEL_COLORS["WHITE"])
+    set_indoor(0, temp_to_pixel_row(indoor_rounded), utils.PIXEL_COLORS["WHITE"])
 
 json_output = { "indoorTemperature": "{:2.1f}".format(indoor_temp),
         "outdoorTemperature": "{:2.1f}".format(outdoor_temp),

@@ -1,4 +1,4 @@
-import httplib
+import http.client
 import os
 from sense_hat import SenseHat
 
@@ -27,7 +27,7 @@ def is_network_up(debug=False):
     if debug:
         return True
     else:
-        conn = httplib.HTTPConnection("www.google.com", timeout = 5)
+        conn = http.client.HTTPConnection("www.google.com", timeout = 5)
 
         try:
             conn.request("HEAD", "/")
