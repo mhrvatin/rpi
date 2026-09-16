@@ -13,6 +13,12 @@ HOT_TEMPERATURE = 28
 MAX_TEMPERATURE = 26
 MIN_TEMPERATURE = MAX_TEMPERATURE - PIXEL_DISPLAY_WIDTH
 
+# Temperatures that get a marker line drawn across the display.
+REFERENCE_TEMPERATURES = {
+    WARM_TEMPERATURE: "YELLOW",
+    HOT_TEMPERATURE: "RED"
+}
+
 # How many ambient readings to average, and the pause between them.
 SENSOR_READ_COUNT = 3
 SENSOR_READ_DELAY = 0.5
@@ -117,6 +123,23 @@ def calc_indoor_temp():
     ambient = read_ambient_temp()
 
     return ambient - ((cpu_temp - ambient) / CPU_TEMP_FACTOR)
+
+def reference_rows(max_temp):
+    """Return {row: color} for the reference lines a scale can display.
+
+    A threshold outside the displayed range gets no row at all, so a
+    HOT_TEMPERATURE above `max_temp` simply draws nothing.
+    """
+    min_temp = max_temp - PIXEL_DISPLAY_WIDTH
+    rows = {}
+
+    for temp, color in REFERENCE_TEMPERATURES.items():
+        if min_temp <= temp <= max_temp:
+            row = translate_temp(temp, min_temp, max_temp,
+                                 0, PIXEL_DISPLAY_WIDTH)
+            rows[int(round(row))] = PIXEL_COLORS[color]
+
+    return rows
 
 def translate_temp(temp, old_min, old_max, new_min, new_max):
     old_range = (old_max - old_min)  

@@ -27,19 +27,11 @@ def shift_hours_left():
     set_rightmost_column_default()
 
 def set_rightmost_column_default():
-    idx = utils.MAX_TEMPERATURE
-    y_offset = utils.PIXEL_DISPLAY_WIDTH
+    reference_rows = utils.reference_rows(utils.MAX_TEMPERATURE)
 
-    while idx >= utils.MAX_TEMPERATURE - utils.PIXEL_DISPLAY_WIDTH:
-        if idx == utils.WARM_TEMPERATURE:
-            sense.set_pixel(0, y_offset, utils.PIXEL_COLORS["YELLOW"])
-        elif idx == utils.HOT_TEMPERATURE:
-            sense.set_pixel(0, y_offset, utils.PIXEL_COLORS["RED"])
-        else:
-            sense.set_pixel(0, y_offset, utils.PIXEL_COLORS["NULL"])
-
-        idx -= 1
-        y_offset -= 1
+    for row in range(0, utils.PIXEL_DISPLAY_WIDTH + 1):
+        sense.set_pixel(0, row,
+                        reference_rows.get(row, utils.PIXEL_COLORS["NULL"]))
 
 def get_weather_data(is_network_up):
     url = "http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(config.API_KEY, config.LAT_LONG)
