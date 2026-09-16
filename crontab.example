@@ -10,7 +10,18 @@
 # makes the append safe. Keep stderr pointed somewhere else: a traceback
 # landing in the buffer would be an unreadable line that the upload has to
 # skip.
-0 * * * * cd /home/pi && /usr/bin/python3 check_temp.py >> apartment_data_buffer.json 2>> check_temp.log
+#
+# tee fans that same line out to a second, independent buffer for the new
+# app's ingest API, alongside the MySQL one. Neither write path touches the
+# other's buffer file.
+#
+# Without pipefail, cron would only ever see tee's exit status, so a crash
+# in check_temp.py (still logged to check_temp.log via its own redirect)
+# would be reported as success. bash -c with pipefail set makes a failure
+# anywhere in the pipe, including tee itself failing to write a buffer,
+# show up as a failed run. tee's own stderr is captured separately, since
+# it is not one of the two redirects inside the quoted pipeline.
+0 * * * * cd /home/pi && bash -c 'set -o pipefail; /usr/bin/python3 check_temp.py 2>> check_temp.log | /usr/bin/tee -a apartment_data_buffer.json >> apartment_data_buffer.api_buffer.json' 2>> tee.log
 
 # Upload whatever has been buffered, a few minutes behind the reading so
 # the two never overlap. Rows left over from a run with no network are
@@ -20,6 +31,11 @@
 # database would otherwise still be holding the buffer when the next hour
 # starts it again, and both would insert the same rows.
 5 * * * * cd /home/pi && /usr/bin/flock -n /home/pi/upload.lock /usr/bin/python3 write_temp_to_db.py 2>> upload.log
+
+# Send the same readings to the new temperature app's ingest API, during the
+# parallel-rollout period. Fully independent of the MySQL upload above: its
+# own buffer, its own lock, so the same offset is fine.
+5 * * * * cd /home/pi && /usr/bin/flock -n /home/pi/api_upload.lock /usr/bin/python3 write_temp_to_api.py 2>> api_upload.log
 
 # Listen for the joystick.
 @reboot cd /home/pi && /usr/bin/python3 joystick_handler.py 2>> joystick.log
