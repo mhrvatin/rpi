@@ -80,7 +80,7 @@ def show_current_temp_handler(event):
         else:               # display is off
             toggle_display()
             dim_display_after_showing_temp = True
-            
+
         save_graph()
         sense.rotation = 180
         indoor_temp = round(utils.calc_indoor_temp(), 1)

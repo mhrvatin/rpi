@@ -51,7 +51,7 @@ def get_weather_data(is_network_up):
             temp = data["current"]["temp_c"]
             wind_speed = data["current"]["wind_kph"]
             precip = float(data["current"]["precip_mm"])
-            
+
             if precip > 0:
                 precip_type = data["current"]["condition"]["text"]
             else:
@@ -124,7 +124,7 @@ else:
 json_output = { "indoorTemperature": "{:2.1f}".format(indoor_temp),
         "outdoorTemperature": "{:2.1f}".format(outdoor_temp),
         "precipitation": "{:2.1f}".format(precip),
-        "precipitationType": precip_type, 
+        "precipitationType": precip_type,
         "windSpeed": "{:2.1f}".format(wind_speed),
         "humidity": "{:2.1f}".format(humidity),
         "pressure": "{:2.1f}".format(pressure),

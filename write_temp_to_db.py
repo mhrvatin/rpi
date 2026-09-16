@@ -1,5 +1,5 @@
 from datetime import datetime
-from peewee import * 
+from peewee import *
 from utils import is_network_up
 import json
 import config
@@ -31,7 +31,7 @@ with open("apartment_data_buffer.json", encoding="utf-8") as f:
     buffered_data = f.readlines()
 
 if is_network_up():
-    db.connect() 
+    db.connect()
 
     for raw_data in buffered_data:
         json_data = json.loads(raw_data)
@@ -46,9 +46,9 @@ if is_network_up():
                     address = json_data["address"],
                     date = json_data["timestamp"])
         apartment.save()
-        
+
         log_data("Upload successfull with data {}".format(json.dumps(json_data)))
-        
+
     db.close()
 
     # flush buffer

@@ -70,7 +70,7 @@ def is_network_up(debug=False):
         try:
             conn.request("HEAD", "/")
             conn.close()
-            
+
             return True
         except:
             conn.close()
@@ -146,8 +146,8 @@ def reference_rows(max_temp):
     return rows
 
 def translate_temp(temp, old_min, old_max, new_min, new_max):
-    old_range = (old_max - old_min)  
-    new_range = (new_max - new_min)  
-    new_value = (((temp - old_min) * new_range) / old_range) + new_min 
+    old_range = (old_max - old_min)
+    new_range = (new_max - new_min)
+    new_value = (((temp - old_min) * new_range) / old_range) + new_min
 
     return new_value
