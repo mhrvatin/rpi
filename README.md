@@ -12,7 +12,9 @@ Requires Python 3.
 5. Update certificates `sudo apt update && sudo apt install ca-certificates`
 6. Clone this repo
 7. Copy files to `~`
-8. Copy `config.example` to `config.py` and fill in the credentials
+8. Copy `config.example` to `config.py` and fill in the credentials, including
+   `TEMPERATURE_API_TOKEN`, which must match whatever secret the new
+   temperature app's own session configures for its ingest endpoint
 9. Install the schedule, see below
 
 ## Schedule
@@ -21,10 +23,17 @@ Requires Python 3.
 Compare it against `crontab -l` before installing it, because the live
 schedule has only ever existed on the Pi.
 
-`check_temp.py` takes a reading and prints one line of JSON, which cron
-appends to `apartment_data_buffer.json`. `write_temp_to_db.py` then moves
-that buffer aside, uploads the rows in one transaction and deletes it. A run
-with no network leaves the buffer alone for the next one.
+`check_temp.py` takes a reading and prints one line of JSON, which cron tees
+to `apartment_data_buffer.json` and, independently, to
+`apartment_data_buffer.api_buffer.json`. `write_temp_to_db.py` moves the
+first buffer aside, uploads the rows to MySQL in one transaction and deletes
+it. `write_temp_to_api.py` does the same with the second buffer, POSTing the
+rows as a JSON array to the new temperature app's ingest endpoint instead.
+The two paths share nothing but the reading itself: separate buffers,
+separate pending files, separate locks, separate logs. This is a
+parallel-rollout arrangement — both write paths run until the new app is
+ready to be the only one. A run with no network leaves its buffer alone for
+the next one.
 
 Every row carries a status of `ok`, `api_error` or `no_network`, so an hour
 with no outdoor reading can be told apart from one that worked. The outdoor
