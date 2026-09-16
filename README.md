@@ -106,5 +106,6 @@ does not shift a display that is already correct.
 ## Joystick
 
 `joystick_handler.py` runs in the background. Press up for the current
-temperature, down to dim the display, and the middle for a binary clock.
-Press the middle again to go back to the graph.
+temperature, down to dim the display, left to shift a pixel around the
+display by tilting the Pi, and the middle for a binary clock. Press left
+or the middle again, respectively, to go back to the graph.

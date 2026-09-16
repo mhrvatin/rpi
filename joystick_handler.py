@@ -6,6 +6,7 @@ import signal
 import sys
 import time
 import binary_clock
+import tilt_pixel
 import utils
 
 # How long the main loop waits for a press before looking again. Short
@@ -14,6 +15,9 @@ IDLE_POLL = 1
 
 # How often the clock redraws itself while it is on screen.
 CLOCK_REFRESH = 0.2
+
+# How often the tilt demo samples the accelerometer and redraws.
+TILT_REFRESH = 0.05
 
 # Bottom right corner of the binary clock.
 CLOCK_ORIGIN_X = 6
@@ -125,6 +129,37 @@ def show_clock():
 
     sense.set_pixels(saved_pixels)
 
+def show_tilt():
+    """Shift a single pixel around the display by tilting the Pi.
+
+    Ends the same way show_clock() does: the press that started it also
+    ends it, and arrives through the same queue.
+    """
+    saved_pixels = sense.get_pixels()
+    sense.clear()
+    state = tilt_pixel.initial_state()
+    last_position = None
+
+    while True:
+        accel = sense.get_accelerometer_raw()
+        state = tilt_pixel.step(state, accel, TILT_REFRESH)
+        position = tilt_pixel.pixel_position(state)
+
+        if position != last_position:
+            sense.clear()
+            sense.set_pixel(position[0], position[1], utils.PIXEL_COLORS["WHITE"])
+            last_position = position
+
+        direction = next_press(TILT_REFRESH)
+
+        if direction == "left":
+            break
+
+        if direction == "down":
+            toggle_display()
+
+    sense.set_pixels(saved_pixels)
+
 def signal_handler(signal, frame):
     sys.exit(0)
 
@@ -132,6 +167,7 @@ sense = utils.get_sense()
 
 sense.stick.direction_up = remember_press
 sense.stick.direction_down = remember_press
+sense.stick.direction_left = remember_press
 sense.stick.direction_middle = remember_press
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -145,6 +181,9 @@ while True:
         drain_presses()
     elif direction == "down":
         toggle_display()
+    elif direction == "left":
+        show_tilt()
+        drain_presses()
     elif direction == "middle":
         show_clock()
         drain_presses()
