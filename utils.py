@@ -66,21 +66,21 @@ def get_sense():
     return _sense
 
 def is_network_up(debug=False):
+    """True when a HEAD request to google.com gets out of the house."""
     if debug:
         return True
-    else:
-        conn = http.client.HTTPConnection("www.google.com",
-                                          timeout = NETWORK_TIMEOUT)
 
-        try:
-            conn.request("HEAD", "/")
-            conn.close()
+    conn = http.client.HTTPConnection("www.google.com",
+                                      timeout = NETWORK_TIMEOUT)
 
-            return True
-        except:
-            conn.close()
+    try:
+        conn.request("HEAD", "/")
 
-            return False
+        return True
+    except (OSError, http.client.HTTPException):
+        return False
+    finally:
+        conn.close()
 
 def quantize(color):
     """Return `color` as the display will report it back.
