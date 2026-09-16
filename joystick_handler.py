@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from sense_hat import SenseHat, ACTION_PRESSED, ACTION_HELD, ACTION_RELEASED
+from sense_hat import ACTION_PRESSED, ACTION_HELD, ACTION_RELEASED
 import signal
 import sys
 import time
@@ -122,7 +122,7 @@ def pushed_right(event):
 def signal_handler(signal, frame):
     sys.exit(0)
 
-sense = SenseHat()
+sense = utils.get_sense()
 
 is_clock_on = Clock.Off
 pixel_list = []

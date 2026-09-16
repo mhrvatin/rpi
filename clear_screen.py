@@ -1,4 +1,3 @@
-from sense_hat import SenseHat
 import sys
 import utils
 
@@ -42,7 +41,7 @@ def shift_hours(current_max, new_max):
                     sense.set_pixel(x, y, sense.get_pixel(x, y - 1))
                     sense.set_pixel(x, y - 1, utils.PIXEL_COLORS["NULL"])
 
-sense = SenseHat()
+sense = utils.get_sense()
 
 if len(sys.argv) == 2:
     max_temp = int(sys.argv[1]) 

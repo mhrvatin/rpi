@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from sense_hat import SenseHat
 from datetime import datetime
 import json
 import requests
@@ -98,7 +97,7 @@ now = datetime.now()
 turn_off_time = now.replace(hour = 22, minute = 0, second = 0, microsecond = 0)
 turn_on_time = now.replace(hour = 6, minute = 0, second = 0, microsecond = 0)
 
-sense = SenseHat()
+sense = utils.get_sense()
 
 if now >= turn_off_time or now <= turn_on_time:
     turn_off_display()

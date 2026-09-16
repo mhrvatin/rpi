@@ -30,7 +30,20 @@ ERROR_CODES = {
     "NO_NETWORK": 99.0
 }
 
-sense = SenseHat()
+_sense = None
+
+def get_sense():
+    """Return the shared SenseHat, building it on first use.
+
+    Constructing a SenseHat opens the board's framebuffer and sensors, which
+    should not happen merely because some module imported this one.
+    """
+    global _sense
+
+    if _sense is None:
+        _sense = SenseHat()
+
+    return _sense
 
 def is_network_up(debug=False):
     if debug:
@@ -62,6 +75,8 @@ def read_ambient_temp():
     that instant happened to hold. The first read after start-up can be far
     off, so one pair is taken and thrown away before averaging begins.
     """
+    sense = get_sense()
+
     sense.get_temperature_from_pressure()
     sense.get_temperature_from_humidity()
 
