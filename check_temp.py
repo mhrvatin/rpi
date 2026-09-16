@@ -8,10 +8,7 @@ import utils
 ADDRESS = "Smörkärnegatan 25"
 
 def indoor_color_already_written_to_pixel(x, y):
-    if sense.get_pixel(x, y) == utils.PIXEL_COLORS["GREEN"]:
-        return True
-
-    return False
+    return utils.pixel_is(sense, x, y, utils.PIXEL_COLORS["GREEN"])
 
 def set_indoor(x, y, color):
     sense.set_pixel(x, y, color)

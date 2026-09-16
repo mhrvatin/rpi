@@ -8,11 +8,11 @@ def draw_reference_lines(max_temp):
     while idx >= max_temp - utils.PIXEL_DISPLAY_WIDTH:
         if idx == utils.WARM_TEMPERATURE:
             for x in range(0, 8):
-                if sense.get_pixel(x, y_offset) == utils.PIXEL_COLORS["NULL"]:
+                if utils.pixel_is(sense, x, y_offset, utils.PIXEL_COLORS["NULL"]):
                     sense.set_pixel(x, y_offset, utils.PIXEL_COLORS["YELLOW"])
         elif idx == utils.HOT_TEMPERATURE:
             for x in range(0, 8):
-                if sense.get_pixel(x, y_offset) == utils.PIXEL_COLORS["NULL"]:
+                if utils.pixel_is(sense, x, y_offset, utils.PIXEL_COLORS["NULL"]):
                     sense.set_pixel(x, y_offset, utils.PIXEL_COLORS["RED"])
 
         idx -= 1
@@ -21,9 +21,8 @@ def draw_reference_lines(max_temp):
 def remove_reference_lines():
     for x in range(0, 8):
         for y in range(0, 8):
-            pixel = sense.get_pixel(x, y)
-
-            if pixel == utils.PIXEL_COLORS["RED"] or pixel == utils.PIXEL_COLORS["YELLOW"]:
+            if (utils.pixel_is(sense, x, y, utils.PIXEL_COLORS["RED"]) or
+                    utils.pixel_is(sense, x, y, utils.PIXEL_COLORS["YELLOW"])):
                 sense.set_pixel(x, y, utils.PIXEL_COLORS["NULL"])
 
 def shift_hours(current_max, new_max):

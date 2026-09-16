@@ -67,6 +67,21 @@ def is_network_up(debug=False):
 
             return False
 
+def quantize(color):
+    """Return `color` as the display will report it back.
+
+    The HAT stores five bits of red, six of green and five of blue, so the
+    low bits of a colour written with set_pixel are lost and get_pixel does
+    not necessarily return what was written.
+    """
+    red, green, blue = color
+
+    return [red & 0xF8, green & 0xFC, blue & 0xF8]
+
+def pixel_is(sense, x, y, color):
+    """True when the pixel at x, y holds `color`, allowing for that loss."""
+    return sense.get_pixel(x, y) == quantize(color)
+
 def get_cpu_temp():
     res = os.popen("vcgencmd measure_temp").readline()
 
