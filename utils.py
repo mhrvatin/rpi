@@ -45,7 +45,7 @@ def get_cpu_temp():
     return(res.replace("temp=","").replace("'C\n",""))
 
 def calc_indoor_temp():
-    cpu_temp = int(float(get_cpu_temp()))
+    cpu_temp = float(get_cpu_temp())
     ambient = sense.get_temperature_from_pressure()
 
     return(ambient - ((cpu_temp - ambient) / 1.5))
