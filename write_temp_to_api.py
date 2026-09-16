@@ -73,10 +73,11 @@ if not rows:
     os.remove(pending)
     sys.exit(0)
 
+url = "https://{}".format(config.TEMPERATURE_API_HOST)
 headers = {"Authorization": "Bearer {}".format(config.TEMPERATURE_API_TOKEN)}
 
 try:
-    r = requests.post(config.TEMPERATURE_API_URL, json = rows,
+    r = requests.post(url, json = rows,
                       headers = headers, timeout = API_TIMEOUT)
 except requests.exceptions.RequestException as error:
     log_data("Upload failed, keeping {} for the next run: {}".format(pending, error))
