@@ -1,0 +1,25 @@
+# Template for the Pi's crontab. Compare it against what is actually
+# installed with `crontab -l` before replacing anything, because the real
+# schedule has only ever lived on the Pi.
+#
+# Install with `crontab crontab.example`, or paste into `crontab -e`.
+
+# Take a reading on the hour and append it to the local buffer.
+#
+# check_temp.py writes exactly one line of JSON to stdout, which is what
+# makes the append safe. Keep stderr pointed somewhere else: a traceback
+# landing in the buffer would be an unreadable line that the upload has to
+# skip.
+0 * * * * cd /home/pi && /usr/bin/python3 check_temp.py >> apartment_data_buffer.json 2>> check_temp.log
+
+# Upload whatever has been buffered, a few minutes behind the reading so
+# the two never overlap. Rows left over from a run with no network are
+# picked up by the next one.
+#
+# flock keeps two uploads from running at once. A run that hangs on the
+# database would otherwise still be holding the buffer when the next hour
+# starts it again, and both would insert the same rows.
+5 * * * * cd /home/pi && /usr/bin/flock -n /home/pi/upload.lock /usr/bin/python3 write_temp_to_db.py 2>> upload.log
+
+# Listen for the joystick.
+@reboot cd /home/pi && /usr/bin/python3 joystick_handler.py 2>> joystick.log

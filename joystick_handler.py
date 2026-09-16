@@ -1,136 +1,150 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from sense_hat import SenseHat, ACTION_PRESSED, ACTION_HELD, ACTION_RELEASED
+from sense_hat import ACTION_PRESSED
+import queue
 import signal
 import sys
 import time
 import binary_clock
-import enum
 import utils
-#import fetch_from_db
 
-class Clock(enum.Enum):
-    On = True
-    Off = False
+# How long the main loop waits for a press before looking again. Short
+# enough that Ctrl-C is not left hanging.
+IDLE_POLL = 1
 
-def set_clock(state):
-    global is_clock_on
-    is_clock_on = state
+# How often the clock redraws itself while it is on screen.
+CLOCK_REFRESH = 0.2
 
-def clock_status():
-    global is_clock_on
-    return is_clock_on
+# Bottom right corner of the binary clock.
+CLOCK_ORIGIN_X = 6
+CLOCK_ORIGIN_Y = 5
+
+# The stick delivers events on a thread of its own that sense_hat starts
+# when a direction callback is assigned. Two things follow from that, and
+# both used to bite. Work done in a callback blocks every later event until
+# it finishes, and calling sense.stick.get_events() from anywhere else
+# returns nothing, because that thread has already taken the events.
+#
+# So the callbacks do one thing only: record which direction was pressed.
+# The main loop below picks presses up from here and does the work.
+presses = queue.Queue()
+
+def remember_press(event):
+    # The initial press only. Holding a direction also delivers repeats, and
+    # queueing those replays the lot the moment a blocking action returns.
+    if event.action == ACTION_PRESSED:
+        presses.put(event.direction)
+
+def next_press(timeout):
+    """The next direction pressed, or None if `timeout` passes first."""
+    try:
+        return presses.get(timeout = timeout)
+    except queue.Empty:
+        return None
+
+def drain_presses():
+    """Discard whatever was pressed during a blocking action."""
+    while True:
+        try:
+            presses.get_nowait()
+        except queue.Empty:
+            return
+
+def display_is_on():
+    return sense.low_light
+
+def turn_display_on():
+    sense.low_light = True
+
+def turn_display_off():
+    sense.gamma = utils.DISPLAY_OFF_GAMMA
 
 def toggle_display():
-    if sense.low_light: # display is on
-        sense.gamma = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    else:               # display is off
-        sense.low_light = True
+    if display_is_on():
+        turn_display_off()
+    else:
+        turn_display_on()
 
-def save_graph():
-    global pixel_list
+def show_temperature():
+    """Scroll the current indoor temperature across the display."""
+    was_off = not display_is_on()
 
-    pixel_list = sense.get_pixels()
+    if was_off:
+        turn_display_on()
+
+    saved_pixels = sense.get_pixels()
     sense.clear()
+    sense.rotation = 180
+    sense.show_message(str(round(utils.calc_indoor_temp(), 1)),
+                       text_colour = [255, 255, 0])
+    sense.rotation = 0
+    sense.set_pixels(saved_pixels)
 
-def restore_graph():
-    sense.set_pixels(pixel_list)
+    if was_off:
+        turn_display_off()
+
+def draw_binary_clock():
+    now = time.localtime()
+    binary_time = binary_clock.parse_decimal_time(now.tm_hour, now.tm_min,
+                                                  now.tm_sec)
+    x = CLOCK_ORIGIN_X
+
+    for digit in binary_time:
+        y = CLOCK_ORIGIN_Y
+
+        for bit in digit:
+            if bit == "1":
+                color = utils.PIXEL_COLORS["GREEN"]
+            else:
+                color = utils.PIXEL_COLORS["RED"]
+
+            sense.set_pixel(x, y, color)
+            y -= 1
+
+        x -= 1
 
 def show_clock():
-    set_clock(Clock.On)
+    """Show the binary clock until the middle of the stick is pressed again.
 
-    while clock_status() == Clock.On:
-        now = time.localtime()
-        hour = now.tm_hour
-        minute = now.tm_min
-        second = now.tm_sec
+    This runs on the main thread, so the presses that end the clock or dim
+    the display arrive through the same queue as any other press.
+    """
+    saved_pixels = sense.get_pixels()
+    sense.clear()
 
-        y_coordinate_offset = 5
-        x_coordinate_offset = 6
+    while True:
+        draw_binary_clock()
 
-        binary_time_array = binary_clock.parse_decimal_time(hour, minute, second)
+        direction = next_press(CLOCK_REFRESH)
 
-        events = sense.stick.get_events()
+        if direction == "middle":
+            break
 
-        for elem_idx, elem in enumerate(binary_time_array):
-            for bit_idx, bit in enumerate(elem):
-                if bit == "1":
-                    sense.set_pixel(x_coordinate_offset, y_coordinate_offset, utils.PIXEL_COLORS["GREEN"])
-                else:
-                    sense.set_pixel(x_coordinate_offset, y_coordinate_offset, utils.PIXEL_COLORS["RED"])
-
-                y_coordinate_offset = y_coordinate_offset - 1
-
-            y_coordinate_offset = 5
-            x_coordinate_offset = x_coordinate_offset - 1
-
-        # won't register turning display on or off
-        for event in events:
-            if event.direction == "middle" and event.action == "pressed":
-                set_clock(Clock.Off)
-            elif event.direction == "down" and event.action == "pressed":
-                toggle_display()
-
-        time.sleep(0.2)
-
-def show_current_temp_handler(event):
-    if event.action != ACTION_RELEASED:
-        if sense.low_light: # display is on
-            dim_display_after_showing_temp = False
-        else:               # display is off
-            toggle_display()
-            dim_display_after_showing_temp = True
-            
-        save_graph()
-        sense.rotation = 180
-        indoor_temp = round(utils.calc_indoor_temp(), 1)
-        sense.show_message(str(indoor_temp), text_colour=[255,255,0])
-        sense.rotation = 0
-        restore_graph()
-
-        if dim_display_after_showing_temp:
+        if direction == "down":
             toggle_display()
 
-def toggle_display_handler(event):
-    if event.action != ACTION_RELEASED:
-        toggle_display()
-
-def show_clock_handler(event):
-    if event.action != ACTION_RELEASED:
-        if clock_status() == Clock.Off:
-            save_graph()
-            show_clock()
-            restore_graph()
-
-def pushed_left(event):
-    global time_offset
-
-    if event.action != ACTION_RELEASED:
-        print "pushed left"
-
-        time_offset += 1
-        rows = fetch_from_db.fetch_left(time_offset)
-        for row in rows:
-            print row.indoor_temperature
-            print row.outdoor_temperature
-
-
-def pushed_right(event):
-    if event.action != ACTION_RELEASED:
-        print "pushed right"
+    sense.set_pixels(saved_pixels)
 
 def signal_handler(signal, frame):
     sys.exit(0)
 
-sense = SenseHat()
+sense = utils.get_sense()
 
-is_clock_on = Clock.Off
-pixel_list = []
-time_offset = 7
+sense.stick.direction_up = remember_press
+sense.stick.direction_down = remember_press
+sense.stick.direction_middle = remember_press
 
-sense.stick.direction_up = show_current_temp_handler
-sense.stick.direction_down = toggle_display_handler
-sense.stick.direction_middle = show_clock_handler
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
-signal.pause()
+
+while True:
+    direction = next_press(IDLE_POLL)
+
+    if direction == "up":
+        show_temperature()
+        drain_presses()
+    elif direction == "down":
+        toggle_display()
+    elif direction == "middle":
+        show_clock()
+        drain_presses()

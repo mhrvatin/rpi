@@ -1,21 +1,14 @@
-#!/usr/bin/python2.7
-# -*- coding: utf-8 -*-
-from sense_hat import SenseHat
+#!/usr/bin/env python3
 from datetime import datetime
 import json
 import requests
-import secrets
+import config
 import utils
 
 ADDRESS = "Smörkärnegatan 25"
-MAX_TEMPERATURE = 26
-MIN_TEMPERATURE = MAX_TEMPERATURE - 7
 
 def indoor_color_already_written_to_pixel(x, y):
-    if sense.get_pixel(x, y) == utils.PIXEL_COLORS["GREEN"]:
-        return True
-
-    return False
+    return utils.pixel_is(sense, x, y, utils.PIXEL_COLORS["GREEN"])
 
 def set_indoor(x, y, color):
     sense.set_pixel(x, y, color)
@@ -27,68 +20,104 @@ def set_outdoor(x, y):
         sense.set_pixel(x, y, utils.PIXEL_COLORS["BLUE"])
 
 def shift_hours_left():
-    for y in xrange(0, 8):
-        for x in xrange(7, 0, -1):
+    for y in range(0, 8):
+        for x in range(7, 0, -1):
             sense.set_pixel(x, y, sense.get_pixel(x - 1, y))
 
     set_rightmost_column_default()
 
 def set_rightmost_column_default():
-    idx = MAX_TEMPERATURE
-    y_offset = utils.PIXEL_DISPLAY_WIDTH
+    reference_rows = utils.reference_rows(MAX_TEMPERATURE)
 
-    while idx >= MAX_TEMPERATURE - utils.PIXEL_DISPLAY_WIDTH:
-        if idx == utils.WARM_TEMPERATURE:
-            sense.set_pixel(0, y_offset, utils.PIXEL_COLORS["YELLOW"])
-        elif idx == utils.HOT_TEMPERATURE:
-            sense.set_pixel(0, y_offset, utils.PIXEL_COLORS["RED"])
-        else:
-            sense.set_pixel(0, y_offset, utils.PIXEL_COLORS["NULL"])
+    for row in range(0, utils.PIXEL_DISPLAY_WIDTH + 1):
+        sense.set_pixel(0, row,
+                        reference_rows.get(row, utils.PIXEL_COLORS["NULL"]))
 
-        idx -= 1
-        y_offset -= 1
+def no_weather_data(status):
+    """An outdoor reading that did not happen, carrying the reason why."""
+    return {"status": status,
+            "temp": None,
+            "precip": None,
+            "precip_type": None,
+            "wind_speed": None}
 
 def get_weather_data(is_network_up):
-    url = "http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(secrets.API_KEY, secrets.LAT_LONG)
+    url = "https://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no".format(config.API_KEY, config.LAT_LONG)
 
-    if is_network_up:
-        r = requests.get(url)
+    if not is_network_up:
+        return no_weather_data(utils.STATUS_NO_NETWORK)
 
-        if r.status_code == 200:
-            data = json.loads(r.text)
+    try:
+        r = requests.get(url, timeout = utils.NETWORK_TIMEOUT)
+    except requests.exceptions.RequestException:
+        return no_weather_data(utils.STATUS_API_ERROR)
 
-            temp = data["current"]["temp_c"]
-            wind_speed = data["current"]["wind_kph"]
-            precip = float(data["current"]["precip_mm"])
-            
-            if precip > 0:
-                precip_type = data["current"]["condition"]["text"]
-            else:
-                precip_type = None
+    if r.status_code != 200:
+        return no_weather_data(utils.STATUS_API_ERROR)
 
-            return [temp, precip, precip_type, wind_speed]
-        else:
-            return [utils.ERROR_CODES["API_ERROR"],
-                    utils.ERROR_CODES["API_ERROR"],
-                    "api error",
-                    utils.ERROR_CODES["API_ERROR"]]
+    try:
+        data = json.loads(r.text)
 
-    return [utils.ERROR_CODES["NO_NETWORK"],
-            utils.ERROR_CODES["NO_NETWORK"],
-            "no network",
-            utils.ERROR_CODES["NO_NETWORK"]]
+        temp = data["current"]["temp_c"]
+        wind_speed = data["current"]["wind_kph"]
+        precip = float(data["current"]["precip_mm"])
+        condition = data["current"]["condition"]["text"]
+    except (ValueError, KeyError, TypeError):
+        return no_weather_data(utils.STATUS_API_ERROR)
+
+    if precip > 0:
+        precip_type = condition
+    else:
+        precip_type = None
+
+    return {"status": utils.STATUS_OK,
+            "temp": temp,
+            "precip": precip,
+            "precip_type": precip_type,
+            "wind_speed": wind_speed}
+
+def temp_is_displayable(temp):
+    """True when a reading exists and falls inside the displayed scale."""
+    if temp is None:
+        return False
+
+    return MIN_TEMPERATURE <= temp <= MAX_TEMPERATURE
+
+def format_reading(value):
+    """One decimal place, or null when the reading did not happen."""
+    if value is None:
+        return None
+
+    return "{:2.1f}".format(value)
+
+def temp_to_pixel_row(temp):
+    """Map a temperature onto a display row.
+
+    `translate_temp` returns a float, and Python 3 rejects a float offset
+    when seeking in the framebuffer, so `set_pixel` needs an int.
+    """
+    row = utils.translate_temp(temp, MIN_TEMPERATURE, MAX_TEMPERATURE,
+                               0, utils.PIXEL_DISPLAY_WIDTH)
+
+    return int(round(row))
 
 def turn_off_display():
-    sense.gamma = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    sense.gamma = utils.DISPLAY_OFF_GAMMA
 
 def turn_on_display():
     sense.low_light = True
 
 now = datetime.now()
+
+# Fixed for the whole run, so a run that straddles the turn of a month
+# cannot draw half of itself against each scale.
+MAX_TEMPERATURE = utils.max_temperature(now)
+MIN_TEMPERATURE = MAX_TEMPERATURE - utils.PIXEL_DISPLAY_WIDTH
+
 turn_off_time = now.replace(hour = 22, minute = 0, second = 0, microsecond = 0)
 turn_on_time = now.replace(hour = 6, minute = 0, second = 0, microsecond = 0)
 
-sense = SenseHat()
+sense = utils.get_sense()
 
 if now >= turn_off_time or now <= turn_on_time:
     turn_off_display()
@@ -100,33 +129,45 @@ indoor_rounded = round(indoor_temp)
 is_network_up = utils.is_network_up()
 weather_data = get_weather_data(is_network_up)
 
-outdoor_temp = weather_data[0]
-precip = weather_data[1]
-precip_type = weather_data[2]
-wind_speed = weather_data[3]
+status = weather_data["status"]
+outdoor_temp = weather_data["temp"]
+precip = weather_data["precip"]
+precip_type = weather_data["precip_type"]
+wind_speed = weather_data["wind_speed"]
 humidity = sense.get_humidity()
 pressure = sense.get_pressure()
 
+previous_max = utils.read_scale_top()
+
+if previous_max is not None and previous_max != MAX_TEMPERATURE:
+    utils.shift_scale(sense, previous_max, MAX_TEMPERATURE)
+
 shift_hours_left()
 
-if is_network_up:
-    if indoor_rounded >= MIN_TEMPERATURE and indoor_rounded <= MAX_TEMPERATURE:
-        set_indoor(0, utils.translate_temp(indoor_rounded, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7), utils.PIXEL_COLORS["GREEN"])
+if temp_is_displayable(indoor_rounded):
+    if status == utils.STATUS_NO_NETWORK:
+        indoor_color = utils.PIXEL_COLORS["WHITE"]
+    else:
+        indoor_color = utils.PIXEL_COLORS["GREEN"]
 
-    if outdoor_temp >= MIN_TEMPERATURE and outdoor_temp <= MAX_TEMPERATURE:
-        set_outdoor(0, utils.translate_temp(outdoor_temp, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7))
+    set_indoor(0, temp_to_pixel_row(indoor_rounded), indoor_color)
 
-else:
-    set_indoor(0, utils.translate_temp(indoor_rounded, MIN_TEMPERATURE, MAX_TEMPERATURE, 0, 7), utils.PIXEL_COLORS["WHITE"])
+if temp_is_displayable(outdoor_temp):
+    set_outdoor(0, temp_to_pixel_row(outdoor_temp))
 
-json_output = { "indoorTemperature": "{:2.1f}".format(indoor_temp),
-        "outdoorTemperature": "{:2.1f}".format(outdoor_temp),
-        "precipitation": "{:2.1f}".format(precip),
-        "precipitationType": precip_type, 
-        "windSpeed": "{:2.1f}".format(wind_speed),
-        "humidity": "{:2.1f}".format(humidity),
-        "pressure": "{:2.1f}".format(pressure),
+# Recorded after the drawing, so a failure part way through cannot leave the
+# file claiming a scale the display was never actually moved to.
+utils.write_scale_top(MAX_TEMPERATURE)
+
+json_output = { "indoorTemperature": format_reading(indoor_temp),
+        "outdoorTemperature": format_reading(outdoor_temp),
+        "precipitation": format_reading(precip),
+        "precipitationType": precip_type,
+        "windSpeed": format_reading(wind_speed),
+        "humidity": format_reading(humidity),
+        "pressure": format_reading(pressure),
         "address": ADDRESS,
+        "status": status,
         "timestamp": str(now) }
 
 print(json.dumps(json_output))

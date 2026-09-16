@@ -1,62 +1,47 @@
-from sense_hat import SenseHat
 import sys
 import utils
 
 def draw_reference_lines(max_temp):
-    idx = max_temp
-    y_offset = utils.PIXEL_DISPLAY_WIDTH
-
-    while idx >= max_temp - utils.PIXEL_DISPLAY_WIDTH:
-        if idx == utils.WARM_TEMPERATURE:
-            for x in xrange(0, 8):
-                if sense.get_pixel(x, y_offset) == utils.PIXEL_COLORS["NULL"]:
-                    sense.set_pixel(x, y_offset, utils.PIXEL_COLORS["YELLOW"])
-        elif idx == utils.HOT_TEMPERATURE:
-            for x in xrange(0, 8):
-                if sense.get_pixel(x, y_offset) == utils.PIXEL_COLORS["NULL"]:
-                    sense.set_pixel(x, y_offset, utils.PIXEL_COLORS["RED"])
-
-        idx -= 1
-        y_offset -= 1
+    for row, color in utils.reference_rows(max_temp).items():
+        for x in range(0, 8):
+            if utils.pixel_is(sense, x, row, utils.PIXEL_COLORS["NULL"]):
+                sense.set_pixel(x, row, color)
 
 def remove_reference_lines():
-    for x in xrange(0, 8):
-        for y in xrange(0, 8):
-            pixel = sense.get_pixel(x, y)
+    colors = [utils.PIXEL_COLORS[name]
+              for name in utils.REFERENCE_TEMPERATURES.values()]
 
-            if pixel == utils.PIXEL_COLORS["RED"] or pixel == utils.PIXEL_COLORS["YELLOW"]:
+    for x in range(0, 8):
+        for y in range(0, 8):
+            if any(utils.pixel_is(sense, x, y, color) for color in colors):
                 sense.set_pixel(x, y, utils.PIXEL_COLORS["NULL"])
 
-def shift_hours(current_max, new_max):
-    steps = current_max - new_max
-    delta = abs(steps)
+sense = utils.get_sense()
 
-    for i in xrange(0, delta):
-        for x in xrange(0, 8):
-            if steps < 0: #shift down
-                for y in xrange(0, 7):
-                    sense.set_pixel(x, y, sense.get_pixel(x, y + 1))
-                    sense.set_pixel(x, y + 1, utils.PIXEL_COLORS["NULL"])
-            elif steps > 0: #shift up
-                for y in xrange(7, 0, -1):
-                    sense.set_pixel(x, y, sense.get_pixel(x, y - 1))
-                    sense.set_pixel(x, y - 1, utils.PIXEL_COLORS["NULL"])
+max_temp = utils.max_temperature()
 
-sense = SenseHat()
-
-if len(sys.argv) == 2:
-    max_temp = int(sys.argv[1]) 
+if len(sys.argv) == 1:
     sense.clear()
     draw_reference_lines(max_temp)
-elif len(sys.argv) == 3:
-    current_max_temp = int(sys.argv[1]) 
-    new_max_temp = int(sys.argv[2])
-
-    shift_hours(current_max_temp, new_max_temp)
-    draw_reference_lines(new_max_temp)
+    utils.write_scale_top(max_temp)
+elif len(sys.argv) == 3 and sys.argv[1] == "--from-top":
+    utils.shift_scale(sense, int(sys.argv[2]), max_temp)
+    draw_reference_lines(max_temp)
+    utils.write_scale_top(max_temp)
 else:
-    print "Invalid argument"
-    print """Usage: python clear_screen.py `max_temp` [new_max_temp],
-    where `max_temp` is the temperature of the top-most line of the display.
-    Or, `max_temp` is the current top line and `new_max_temp` is the new top line you want to set"""
-    exit
+    print("Invalid arguments", file=sys.stderr)
+    print("""Usage: python3 clear_screen.py [--from-top OLD_TOP]
+
+    With no argument, clear the display and draw the reference lines for the
+    scale the time of year calls for, whose top is currently {}.
+
+    With --from-top OLD_TOP, shift the graph already on the display from
+    that top onto the current one instead of clearing it. check_temp.py does
+    this by itself when the season turns, so this is only for putting a
+    display right by hand.
+
+    An earlier version took a bare number meaning the top to draw. That form
+    is rejected rather than accepted, so it cannot quietly do the other
+    thing.""".format(max_temp),
+          file=sys.stderr)
+    sys.exit(1)
