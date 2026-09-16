@@ -43,19 +43,23 @@ def shift_hours(current_max, new_max):
 
 sense = utils.get_sense()
 
-if len(sys.argv) == 2:
-    max_temp = int(sys.argv[1]) 
+if len(sys.argv) == 1:
     sense.clear()
-    draw_reference_lines(max_temp)
-elif len(sys.argv) == 3:
-    current_max_temp = int(sys.argv[1]) 
-    new_max_temp = int(sys.argv[2])
+    draw_reference_lines(utils.MAX_TEMPERATURE)
+elif len(sys.argv) == 2:
+    old_max_temp = int(sys.argv[1])
 
-    shift_hours(current_max_temp, new_max_temp)
-    draw_reference_lines(new_max_temp)
+    shift_hours(old_max_temp, utils.MAX_TEMPERATURE)
+    draw_reference_lines(utils.MAX_TEMPERATURE)
 else:
-    print("Invalid argument")
-    print("""Usage: python3 clear_screen.py `max_temp` [new_max_temp],
-    where `max_temp` is the temperature of the top-most line of the display.
-    Or, `max_temp` is the current top line and `new_max_temp` is the new top line you want to set""")
-    exit
+    print("Invalid arguments", file=sys.stderr)
+    print("""Usage: python3 clear_screen.py [old_max_temp]
+
+    With no argument, clear the display and draw the reference lines for the
+    current scale, whose top is utils.MAX_TEMPERATURE ({}).
+
+    With old_max_temp, shift the graph already on the display to line up
+    with the current scale, then draw the reference lines. Use this after
+    changing MAX_TEMPERATURE in utils.py.""".format(utils.MAX_TEMPERATURE),
+          file=sys.stderr)
+    sys.exit(1)

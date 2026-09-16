@@ -7,6 +7,12 @@ PIXEL_DISPLAY_WIDTH = 7
 WARM_TEMPERATURE = 26
 HOT_TEMPERATURE = 28
 
+# Top of the displayed scale. Defined here so the scripts that draw the
+# graph and the ones that read it cannot drift apart. The bottom of the
+# scale follows from the height of the display.
+MAX_TEMPERATURE = 26
+MIN_TEMPERATURE = MAX_TEMPERATURE - PIXEL_DISPLAY_WIDTH
+
 # How many ambient readings to average, and the pause between them.
 SENSOR_READ_COUNT = 3
 SENSOR_READ_DELAY = 0.5

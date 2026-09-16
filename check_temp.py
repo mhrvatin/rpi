@@ -6,8 +6,6 @@ import config
 import utils
 
 ADDRESS = "Smörkärnegatan 25"
-MAX_TEMPERATURE = 26
-MIN_TEMPERATURE = MAX_TEMPERATURE - 7
 
 def indoor_color_already_written_to_pixel(x, y):
     if sense.get_pixel(x, y) == utils.PIXEL_COLORS["GREEN"]:
@@ -32,10 +30,10 @@ def shift_hours_left():
     set_rightmost_column_default()
 
 def set_rightmost_column_default():
-    idx = MAX_TEMPERATURE
+    idx = utils.MAX_TEMPERATURE
     y_offset = utils.PIXEL_DISPLAY_WIDTH
 
-    while idx >= MAX_TEMPERATURE - utils.PIXEL_DISPLAY_WIDTH:
+    while idx >= utils.MAX_TEMPERATURE - utils.PIXEL_DISPLAY_WIDTH:
         if idx == utils.WARM_TEMPERATURE:
             sense.set_pixel(0, y_offset, utils.PIXEL_COLORS["YELLOW"])
         elif idx == utils.HOT_TEMPERATURE:
@@ -82,7 +80,7 @@ def temp_to_pixel_row(temp):
     `translate_temp` returns a float, and Python 3 rejects a float offset
     when seeking in the framebuffer, so `set_pixel` needs an int.
     """
-    row = utils.translate_temp(temp, MIN_TEMPERATURE, MAX_TEMPERATURE,
+    row = utils.translate_temp(temp, utils.MIN_TEMPERATURE, utils.MAX_TEMPERATURE,
                                0, utils.PIXEL_DISPLAY_WIDTH)
 
     return int(round(row))
@@ -119,10 +117,10 @@ pressure = sense.get_pressure()
 shift_hours_left()
 
 if is_network_up:
-    if indoor_rounded >= MIN_TEMPERATURE and indoor_rounded <= MAX_TEMPERATURE:
+    if indoor_rounded >= utils.MIN_TEMPERATURE and indoor_rounded <= utils.MAX_TEMPERATURE:
         set_indoor(0, temp_to_pixel_row(indoor_rounded), utils.PIXEL_COLORS["GREEN"])
 
-    if outdoor_temp >= MIN_TEMPERATURE and outdoor_temp <= MAX_TEMPERATURE:
+    if outdoor_temp >= utils.MIN_TEMPERATURE and outdoor_temp <= utils.MAX_TEMPERATURE:
         set_outdoor(0, temp_to_pixel_row(outdoor_temp))
 
 else:
