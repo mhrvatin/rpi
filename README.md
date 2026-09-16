@@ -30,6 +30,31 @@ Every row carries a status of `ok`, `api_error` or `no_network`, so an hour
 with no outdoor reading can be told apart from one that worked. The outdoor
 columns are null in that case.
 
+## Schema
+
+The status column and the nullable outdoor columns need this once, before
+the current code runs. Peewee does not alter the table itself.
+
+```sql
+ALTER TABLE apartment_data ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ok';
+ALTER TABLE apartment_data MODIFY COLUMN outdoor_temperature DOUBLE NULL;
+ALTER TABLE apartment_data MODIFY COLUMN precipitation DOUBLE NULL;
+ALTER TABLE apartment_data MODIFY COLUMN wind_speed DOUBLE NULL;
+```
+
+The first statement marks every existing row `ok`, including the ones that
+hold the old 98 and 99 degree error values. To label and clear those:
+
+```sql
+UPDATE apartment_data SET status = 'api_error' WHERE outdoor_temperature = 98.0;
+UPDATE apartment_data SET status = 'no_network' WHERE outdoor_temperature = 99.0;
+UPDATE apartment_data SET outdoor_temperature = NULL, precipitation = NULL,
+    wind_speed = NULL WHERE status <> 'ok';
+```
+
+Rolling back a failed upload needs InnoDB, which is the default. Check with
+`SHOW TABLE STATUS LIKE 'apartment_data'` if in doubt.
+
 ## Display
 
 The graph plots one column per hour, newest on the left, over a scale whose
