@@ -1,10 +1,19 @@
 import http.client
 import os
+import time
 from sense_hat import SenseHat
 
 PIXEL_DISPLAY_WIDTH = 7
 WARM_TEMPERATURE = 26
 HOT_TEMPERATURE = 28
+
+# How many ambient readings to average, and the pause between them.
+SENSOR_READ_COUNT = 3
+SENSOR_READ_DELAY = 0.5
+
+# The HAT sits above the CPU, so it reads warm. Subtracting the gap to the
+# CPU divided by this factor is the usual correction for that.
+CPU_TEMP_FACTOR = 1.5
 
 PIXEL_COLORS = {
     "NULL": [0, 0, 0],
@@ -44,11 +53,34 @@ def get_cpu_temp():
 
     return(res.replace("temp=","").replace("'C\n",""))
 
+def read_ambient_temp():
+    """Average both HAT temperature sensors over several reads.
+
+    The pressure and humidity sensors each carry their own offset and
+    disagree by a few tenths of a degree, so the mean of the two is steadier
+    than either one alone. A single reading also picks up whatever noise
+    that instant happened to hold. The first read after start-up can be far
+    off, so one pair is taken and thrown away before averaging begins.
+    """
+    sense.get_temperature_from_pressure()
+    sense.get_temperature_from_humidity()
+
+    readings = []
+
+    while len(readings) < SENSOR_READ_COUNT:
+        if readings:
+            time.sleep(SENSOR_READ_DELAY)
+
+        readings.append((sense.get_temperature_from_pressure() +
+                         sense.get_temperature_from_humidity()) / 2)
+
+    return sum(readings) / len(readings)
+
 def calc_indoor_temp():
     cpu_temp = float(get_cpu_temp())
-    ambient = sense.get_temperature_from_pressure()
+    ambient = read_ambient_temp()
 
-    return(ambient - ((cpu_temp - ambient) / 1.5))
+    return ambient - ((cpu_temp - ambient) / CPU_TEMP_FACTOR)
 
 def translate_temp(temp, old_min, old_max, new_min, new_max):
     old_range = (old_max - old_min)  
