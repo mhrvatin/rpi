@@ -102,7 +102,7 @@ def temp_to_pixel_row(temp):
     return int(round(row))
 
 def turn_off_display():
-    sense.gamma = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    sense.gamma = utils.DISPLAY_OFF_GAMMA
 
 def turn_on_display():
     sense.low_light = True

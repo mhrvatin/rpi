@@ -19,6 +19,10 @@ REFERENCE_TEMPERATURES = {
     HOT_TEMPERATURE: "RED"
 }
 
+# Writing a gamma table of all zeroes is how the display is turned off. A
+# low-light table turns it back on.
+DISPLAY_OFF_GAMMA = [0] * 32
+
 # Seconds to wait on any network call before giving up.
 NETWORK_TIMEOUT = 5
 
